@@ -36,9 +36,9 @@ interface Task {
 }
 
 const columns: Array<{ key: Task['status']; label: string; accent: string }> = [
-  { key: 'TODO', label: 'To Do', accent: 'border-slate-700' },
-  { key: 'IN_PROGRESS', label: 'In Progress', accent: 'border-indigo-500/40' },
-  { key: 'DONE', label: 'Done', accent: 'border-emerald-500/40' },
+  { key: 'TODO', label: 'To Do', accent: 'border-stone-200 bg-stone-50/70' },
+  { key: 'IN_PROGRESS', label: 'In Progress', accent: 'border-amber-200 bg-amber-50/40' },
+  { key: 'DONE', label: 'Done', accent: 'border-emerald-200 bg-emerald-50/40' },
 ];
 
 export default function WorkspacesPage() {
@@ -151,29 +151,27 @@ export default function WorkspacesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-white">
-            <Kanban className="h-7 w-7 text-indigo-400" aria-hidden="true" />
-            Team Workspaces &amp; Kanban Board
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Manage team members and track action items extracted from meetings.
-          </p>
-        </div>
+      <div>
+        <h1 className="flex items-center gap-2 text-3xl font-bold text-stone-900">
+          <Kanban className="h-7 w-7 text-emerald-700" aria-hidden="true" />
+          Team Workspaces &amp; Kanban Board
+        </h1>
+        <p className="mt-1 text-sm text-stone-500">
+          Manage team members and track action items extracted from meetings.
+        </p>
       </div>
 
-      {/* Workspace Selector + Create Workspace + Invite Member */}
+      {/* Workspace Controls */}
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-          <label htmlFor="ws-select" className="block text-xs font-medium text-slate-400 mb-1.5">
+        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+          <label htmlFor="ws-select" className="block text-xs font-medium text-stone-600 mb-1.5">
             Active Workspace
           </label>
           <select
             id="ws-select"
             value={selectedWsId}
             onChange={(e) => setSelectedWsId(e.target.value)}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2.5 text-sm text-white"
+            className="w-full rounded-xl border border-stone-300 bg-white p-2.5 text-sm text-stone-900"
           >
             <option value="">All Workspaces</option>
             {workspaces.map((ws) => (
@@ -188,9 +186,9 @@ export default function WorkspacesPage() {
               {activeWorkspace.members.map((m) => (
                 <span
                   key={m.id}
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-950 px-2.5 py-0.5 text-[11px] text-slate-300"
+                  className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2.5 py-0.5 text-[11px] text-stone-700"
                 >
-                  <Users className="h-3 w-3 text-indigo-400" aria-hidden="true" />
+                  <Users className="h-3 w-3 text-emerald-700" aria-hidden="true" />
                   {m.user.name || m.user.email}
                 </span>
               ))}
@@ -200,9 +198,9 @@ export default function WorkspacesPage() {
 
         <form
           onSubmit={handleCreateWorkspace}
-          className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-2.5"
+          className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm space-y-2.5"
         >
-          <label htmlFor="new-ws" className="block text-xs font-medium text-slate-400">
+          <label htmlFor="new-ws" className="block text-xs font-medium text-stone-600">
             Create New Workspace
           </label>
           <div className="flex gap-2">
@@ -212,11 +210,11 @@ export default function WorkspacesPage() {
               value={wsName}
               onChange={(e) => setWsName(e.target.value)}
               placeholder="e.g. Mobile Engineering"
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+              className="flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
             />
             <button
               type="submit"
-              className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+              className="inline-flex items-center gap-1 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-stone-800"
             >
               <Plus className="h-4 w-4" />
               Create
@@ -226,9 +224,9 @@ export default function WorkspacesPage() {
 
         <form
           onSubmit={handleInviteMember}
-          className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-2.5"
+          className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm space-y-2.5"
         >
-          <label htmlFor="invite-email" className="block text-xs font-medium text-slate-400">
+          <label htmlFor="invite-email" className="block text-xs font-medium text-stone-600">
             Invite Member to Workspace
           </label>
           <div className="flex gap-2">
@@ -238,12 +236,12 @@ export default function WorkspacesPage() {
               value={memberEmail}
               onChange={(e) => setMemberEmail(e.target.value)}
               placeholder="teammate@company.com"
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+              className="flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
             />
             <button
               type="submit"
               disabled={!selectedWsId}
-              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
             >
               <UserPlus className="h-4 w-4" />
               Add
@@ -255,14 +253,14 @@ export default function WorkspacesPage() {
       {/* Add Task Bar */}
       <form
         onSubmit={handleCreateTask}
-        className="mt-6 flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900/80 p-4 sm:flex-row sm:items-center"
+        className="mt-6 flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center"
       >
         <input
           type="text"
           value={taskTitle}
           onChange={(e) => setTaskTitle(e.target.value)}
           placeholder="Add a new Kanban task..."
-          className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+          className="flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
           required
         />
         <input
@@ -270,7 +268,7 @@ export default function WorkspacesPage() {
           value={taskAssignee}
           onChange={(e) => setTaskAssignee(e.target.value)}
           placeholder="Assignee (e.g. Alex)"
-          className="sm:w-44 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+          className="sm:w-44 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
         />
         <select
           aria-label="Task priority"
@@ -278,7 +276,7 @@ export default function WorkspacesPage() {
           onChange={(e) =>
             setTaskPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH')
           }
-          className="sm:w-32 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+          className="sm:w-32 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
         >
           <option value="HIGH">High</option>
           <option value="MEDIUM">Medium</option>
@@ -286,7 +284,7 @@ export default function WorkspacesPage() {
         </select>
         <button
           type="submit"
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
         >
           <Plus className="h-4 w-4" />
           Add Task
@@ -300,56 +298,56 @@ export default function WorkspacesPage() {
           return (
             <div
               key={col.key}
-              className={`rounded-2xl border ${col.accent} bg-slate-900/60 p-4`}
+              className={`rounded-2xl border ${col.accent} p-4`}
             >
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-stone-700">
                   {col.label}
                 </h2>
-                <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
+                <span className="rounded-full bg-white border border-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-700">
                   {colTasks.length}
                 </span>
               </div>
 
               <div className="space-y-3">
                 {colTasks.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-slate-800 p-4 text-center text-xs text-slate-500">
+                  <p className="rounded-xl border border-dashed border-stone-300 bg-white/60 p-4 text-center text-xs text-stone-400">
                     No tasks in {col.label}
                   </p>
                 ) : (
                   colTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 shadow"
+                      className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-semibold text-white">
+                        <h3 className="text-sm font-semibold text-stone-900">
                           {task.title}
                         </h3>
                         <span
                           className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${
                             task.priority === 'HIGH'
-                              ? 'bg-rose-500/15 text-rose-300'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : task.priority === 'LOW'
-                                ? 'bg-slate-800 text-slate-400'
-                                : 'bg-amber-500/15 text-amber-300'
+                                ? 'bg-stone-100 text-stone-600'
+                                : 'bg-amber-50 text-amber-800 border border-amber-200'
                           }`}
                         >
                           {task.priority}
                         </span>
                       </div>
 
-                      <p className="mt-1.5 text-xs text-slate-400">
+                      <p className="mt-1.5 text-xs text-stone-500">
                         Assignee: {task.assigneeName || 'Unassigned'}
                       </p>
 
                       {task.meeting && (
-                        <p className="mt-1 text-[11px] text-indigo-400">
+                        <p className="mt-1 text-[11px] font-medium text-emerald-700">
                           From: {task.meeting.title}
                         </p>
                       )}
 
-                      <div className="mt-3 flex items-center justify-between border-t border-slate-800/80 pt-2.5">
+                      <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-2.5">
                         <div className="flex gap-1.5">
                           {col.key !== 'TODO' && (
                             <button
@@ -361,7 +359,7 @@ export default function WorkspacesPage() {
                                   col.key === 'DONE' ? 'IN_PROGRESS' : 'TODO'
                                 )
                               }
-                              className="rounded border border-slate-700 p-1 text-slate-300 hover:bg-slate-800"
+                              className="rounded-lg border border-stone-200 p-1 text-stone-600 hover:bg-stone-100"
                             >
                               <ArrowLeft className="h-3.5 w-3.5" />
                             </button>
@@ -376,7 +374,7 @@ export default function WorkspacesPage() {
                                   col.key === 'TODO' ? 'IN_PROGRESS' : 'DONE'
                                 )
                               }
-                              className="rounded border border-slate-700 p-1 text-slate-300 hover:bg-slate-800"
+                              className="rounded-lg border border-stone-200 p-1 text-stone-600 hover:bg-stone-100"
                             >
                               <ArrowRight className="h-3.5 w-3.5" />
                             </button>
@@ -386,7 +384,7 @@ export default function WorkspacesPage() {
                           type="button"
                           aria-label={`Delete task ${task.title}`}
                           onClick={() => deleteTask(task.id)}
-                          className="text-slate-500 hover:text-rose-400"
+                          className="text-stone-400 hover:text-rose-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

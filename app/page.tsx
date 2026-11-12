@@ -57,65 +57,74 @@ const capabilities = [
     id: 'F-07',
     title: 'Analytics & Insights',
     description:
-      'Meeting frequency, task completion rates, contributor workload charts, and CSV/JSON report exports.',
+      'Meeting frequency, task completion rates, contributor workload charts, and CSV report exports.',
     icon: BarChart3,
   },
 ];
 
 export default function Home() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
       {/* Hero Section */}
-      <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 p-8 sm:p-12 shadow-2xl">
+      <section className="rounded-3xl border border-stone-200 bg-gradient-to-br from-white via-emerald-50/40 to-amber-50/50 p-8 sm:p-12 shadow-sm">
         <div className="max-w-3xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Zidio Development • Production Enterprise Platform v2.0
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-semibold text-emerald-800">
+            <Sparkles className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+            Zidio Development • Enterprise Collaboration v2.0
           </span>
-          <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-stone-900 sm:text-5xl">
             Turn Every Meeting Into{' '}
-            <span className="text-indigo-400">Actionable Intelligence</span>
+            <span className="text-emerald-700">Actionable Intelligence</span>
           </h1>
-          <p className="mt-4 text-base text-slate-300 sm:text-lg leading-relaxed">
+          <p className="mt-4 text-base text-stone-600 sm:text-lg leading-relaxed">
             IntellMeet unifies real-time WebRTC video conferencing, live speech
             transcription, AI-generated summaries, automatic Kanban action items,
-            and enterprise productivity analytics in one workspace.
+            and enterprise productivity analytics in one calm, focused workspace.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-700 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 transition"
             >
-              Launch Dashboard
+              Open Meetings Hub
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             <Link
               href="/workspaces"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800 transition"
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50 transition"
             >
-              Open Kanban Board
+              Kanban Workspaces
             </Link>
             <Link
               href="/analytics"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800 transition"
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50 transition"
             >
-              View Analytics
+              Analytics
             </Link>
           </div>
         </div>
 
         {/* Demo Instructions Banner */}
-        <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-200">
-          <p className="font-semibold text-emerald-300">
+        <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-stone-700">
+          <p className="font-semibold text-amber-900">
             Quick Demo Guide (No Sign-Up Required):
           </p>
-          <p className="mt-1 text-slate-300">
-            Jump straight into <Link href="/dashboard" className="underline text-emerald-300">Meetings Dashboard</Link> to
-            create or join a live WebRTC video room, test live speech captions &amp;
+          <p className="mt-1">
+            Head into{' '}
+            <Link href="/dashboard" className="font-semibold text-emerald-800 underline">
+              Meetings Hub
+            </Link>{' '}
+            to launch a live WebRTC video room, test live speech captions &amp;
             chat, generate AI summaries that auto-populate the{' '}
-            <Link href="/workspaces" className="underline text-emerald-300">Kanban Board</Link>, or inspect{' '}
-            <Link href="/analytics" className="underline text-emerald-300">Analytics</Link>.
+            <Link href="/workspaces" className="font-semibold text-emerald-800 underline">
+              Kanban Board
+            </Link>
+            , or inspect{' '}
+            <Link href="/analytics" className="font-semibold text-emerald-800 underline">
+              Analytics
+            </Link>
+            .
           </p>
         </div>
       </section>
@@ -123,10 +132,10 @@ export default function Home() {
       {/* Capabilities Grid */}
       <section className="mt-14">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold text-stone-900">
             Core Enterprise Capabilities
           </h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-stone-500">
             Built to satisfy all functional requirements (F-01 through F-07).
           </p>
         </div>
@@ -137,20 +146,20 @@ export default function Home() {
             return (
               <div
                 key={cap.id}
-                className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 hover:border-indigo-500/40 transition"
+                className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm hover:border-emerald-300 hover:shadow-md transition"
               >
                 <div className="flex items-center justify-between">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600/15 text-indigo-400">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </span>
-                  <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-400">
+                  <span className="rounded-md bg-stone-100 px-2 py-0.5 font-mono text-xs font-medium text-stone-500">
                     {cap.id}
                   </span>
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-white">
+                <h3 className="mt-4 text-lg font-semibold text-stone-900">
                   {cap.title}
                 </h3>
-                <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                <p className="mt-2 text-sm text-stone-600 leading-relaxed">
                   {cap.description}
                 </p>
               </div>

@@ -49,7 +49,7 @@ model Meeting {
   id              String        @id @default(cuid())
   title           String
   description     String?
-  roomCode        String        @unique @default(cuid())
+  roomCode        String?
   status          String        @default("SCHEDULED")
   scheduledAt     DateTime?
   durationMinutes Int           @default(30)

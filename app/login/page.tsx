@@ -59,28 +59,28 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-stone-900">
             {mode === 'login' ? 'Sign In to IntellMeet' : 'Create Your Account'}
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-stone-500">
             Enterprise AI Meetings, Kanban &amp; Analytics
           </p>
         </div>
 
         {/* Mode Toggle */}
-        <div className="mt-6 grid grid-cols-2 rounded-lg bg-slate-950 p-1 border border-slate-800">
+        <div className="mt-6 grid grid-cols-2 rounded-xl bg-stone-100 p-1 border border-stone-200">
           <button
             type="button"
             onClick={() => {
               setMode('login');
               setError('');
             }}
-            className={`rounded-md py-2 text-sm font-medium transition ${
+            className={`rounded-lg py-2 text-sm font-semibold transition ${
               mode === 'login'
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-500 hover:text-stone-900'
             }`}
           >
             Sign In
@@ -91,10 +91,10 @@ export default function LoginPage() {
               setMode('register');
               setError('');
             }}
-            className={`rounded-md py-2 text-sm font-medium transition ${
+            className={`rounded-lg py-2 text-sm font-semibold transition ${
               mode === 'register'
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-500 hover:text-stone-900'
             }`}
           >
             Register
@@ -104,7 +104,7 @@ export default function LoginPage() {
         {error && (
           <div
             role="alert"
-            className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300"
+            className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700"
           >
             {error}
           </div>
@@ -115,13 +115,13 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-slate-300"
+                className="block text-sm font-medium text-stone-700"
               >
                 Full Name
               </label>
               <div className="relative mt-1">
                 <User
-                  className="absolute left-3 top-3 h-4 w-4 text-slate-500"
+                  className="absolute left-3 top-3 h-4 w-4 text-stone-400"
                   aria-hidden="true"
                 />
                 <input
@@ -130,7 +130,7 @@ export default function LoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Alex Rivera"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
                   required
                 />
               </div>
@@ -140,13 +140,13 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-slate-300"
+              className="block text-sm font-medium text-stone-700"
             >
               Work Email
             </label>
             <div className="relative mt-1">
               <Mail
-                className="absolute left-3 top-3 h-4 w-4 text-slate-500"
+                className="absolute left-3 top-3 h-4 w-4 text-stone-400"
                 aria-hidden="true"
               />
               <input
@@ -155,7 +155,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
                 required
               />
             </div>
@@ -164,13 +164,13 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-slate-300"
+              className="block text-sm font-medium text-stone-700"
             >
               Password
             </label>
             <div className="relative mt-1">
               <Lock
-                className="absolute left-3 top-3 h-4 w-4 text-slate-500"
+                className="absolute left-3 top-3 h-4 w-4 text-stone-400"
                 aria-hidden="true"
               />
               <input
@@ -180,7 +180,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
                 required
               />
             </div>
@@ -189,7 +189,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+            className="w-full rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 transition"
           >
             {loading
               ? 'Please wait...'
@@ -199,11 +199,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 border-t border-slate-800 pt-5">
+        <div className="mt-6 border-t border-stone-200 pt-5">
           <button
             type="button"
             onClick={handleDemoAccess}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
           >
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             Continue as Demo User (No Sign-Up)

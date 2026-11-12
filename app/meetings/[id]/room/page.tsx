@@ -84,7 +84,6 @@ export default function MeetingRoomPage() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
-  // Load meeting info & chat messages
   const loadRoomData = useCallback(async () => {
     try {
       const [mtgRes, msgRes] = await Promise.all([
@@ -109,7 +108,6 @@ export default function MeetingRoomPage() {
     loadRoomData();
   }, [loadRoomData]);
 
-  // Initialize local camera/mic
   useEffect(() => {
     let active = true;
     async function initMedia() {
@@ -148,7 +146,6 @@ export default function MeetingRoomPage() {
     };
   }, []);
 
-  // BroadcastChannel + polling for real-time presence & chat across tabs
   useEffect(() => {
     const channel = new BroadcastChannel(`intellmeet-room-${meetingId}`);
     channelRef.current = channel;
@@ -367,14 +364,15 @@ export default function MeetingRoomPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
       {/* Top Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <h1 className="text-lg font-bold text-white">{meetingTitle}</h1>
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <h1 className="text-lg font-bold text-stone-900">{meetingTitle}</h1>
           </div>
-          <p className="text-xs text-slate-400">
-            Room ID: <span className="font-mono">{meetingId}</span> • {Math.max(1, peers.length)} active participant(s)
+          <p className="text-xs text-stone-500">
+            Room ID: <span className="font-mono">{meetingId}</span> •{' '}
+            {Math.max(1, peers.length)} active participant(s)
           </p>
         </div>
 
@@ -384,12 +382,12 @@ export default function MeetingRoomPage() {
             aria-label="Your display name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="w-36 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white"
+            className="w-36 rounded-xl border border-stone-300 bg-stone-50 px-2.5 py-1.5 text-xs text-stone-900"
             placeholder="Your Name"
           />
           <Link
             href={`/meetings/${meetingId}`}
-            className="inline-flex items-center gap-1 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-500/20"
+            className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             Post-Meeting AI
@@ -398,16 +396,15 @@ export default function MeetingRoomPage() {
       </div>
 
       {mediaNotice && (
-        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
           {mediaNotice}
         </div>
       )}
 
-      {/* Main Grid: Video Stage + Collaboration Sidebar */}
+      {/* Main Grid */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Video Stage */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="relative aspect-video overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 flex items-center justify-center">
+          <div className="relative aspect-video overflow-hidden rounded-2xl border border-stone-200 bg-stone-900 flex items-center justify-center shadow-sm">
             <video
               ref={localVideoRef}
               autoPlay
@@ -416,33 +413,32 @@ export default function MeetingRoomPage() {
               className={`h-full w-full object-cover ${cameraOff && !screenSharing ? 'hidden' : ''}`}
             />
             {cameraOff && !screenSharing && (
-              <div className="flex flex-col items-center gap-2 text-slate-400">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600/20 text-2xl font-bold text-indigo-300">
+              <div className="flex flex-col items-center gap-2 text-stone-300">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-700/30 text-2xl font-bold text-emerald-300">
                   {displayName.slice(0, 2).toUpperCase()}
                 </div>
                 <p className="text-sm font-medium text-white">{displayName}</p>
-                <p className="text-xs text-slate-500">Camera is off</p>
+                <p className="text-xs text-stone-400">Camera is off</p>
               </div>
             )}
 
-            {/* Live Captions Overlay */}
             {captionsOn && (
-              <div className="absolute bottom-3 left-3 right-3 rounded-lg bg-slate-950/85 px-3 py-2 text-xs text-slate-200 border border-slate-700">
-                <span className="font-semibold text-indigo-400">Live Captions: </span>
+              <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-stone-950/85 px-3 py-2 text-xs text-stone-100 border border-stone-700">
+                <span className="font-semibold text-emerald-400">Live Captions: </span>
                 {transcriptLines[transcriptLines.length - 1] || 'Listening...'}
               </div>
             )}
           </div>
 
           {/* Meeting Controls Bar */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/90 p-3">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
             <button
               type="button"
               onClick={toggleMute}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                 muted
                   ? 'bg-rose-600 text-white'
-                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
               }`}
             >
               {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -452,10 +448,10 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={toggleCamera}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                 cameraOff
                   ? 'bg-rose-600 text-white'
-                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
               }`}
             >
               {cameraOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
@@ -465,10 +461,10 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={toggleScreenShare}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                 screenSharing
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
               }`}
             >
               {screenSharing ? (
@@ -482,10 +478,10 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={toggleRecording}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                 recording
                   ? 'bg-rose-600 text-white animate-pulse'
-                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
               }`}
             >
               {recording ? <Square className="h-4 w-4" /> : <CircleDot className="h-4 w-4" />}
@@ -495,10 +491,10 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={toggleCaptions}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                 captionsOn
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
               }`}
             >
               <Sparkles className="h-4 w-4" />
@@ -508,7 +504,7 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={handleLeaveAndSummarize}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
             >
               <PhoneOff className="h-4 w-4" />
               Leave &amp; Summarize
@@ -517,13 +513,15 @@ export default function MeetingRoomPage() {
         </div>
 
         {/* Collaboration Sidebar */}
-        <div className="flex h-[520px] flex-col rounded-2xl border border-slate-800 bg-slate-900/90">
-          <div className="grid grid-cols-3 border-b border-slate-800 p-1">
+        <div className="flex h-[520px] flex-col rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="grid grid-cols-3 border-b border-stone-200 p-1.5 bg-stone-50 rounded-t-2xl">
             <button
               type="button"
               onClick={() => setActiveTab('chat')}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold ${
-                activeTab === 'chat' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold ${
+                activeTab === 'chat'
+                  ? 'bg-white text-stone-900 shadow-sm'
+                  : 'text-stone-500'
               }`}
             >
               <MessageSquare className="h-3.5 w-3.5" />
@@ -532,8 +530,10 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={() => setActiveTab('notes')}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold ${
-                activeTab === 'notes' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold ${
+                activeTab === 'notes'
+                  ? 'bg-white text-stone-900 shadow-sm'
+                  : 'text-stone-500'
               }`}
             >
               <FileText className="h-3.5 w-3.5" />
@@ -542,10 +542,10 @@ export default function MeetingRoomPage() {
             <button
               type="button"
               onClick={() => setActiveTab('participants')}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold ${
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold ${
                 activeTab === 'participants'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400'
+                  ? 'bg-white text-stone-900 shadow-sm'
+                  : 'text-stone-500'
               }`}
             >
               <Users className="h-3.5 w-3.5" />
@@ -557,39 +557,39 @@ export default function MeetingRoomPage() {
             <>
               <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
                 {messages.length === 0 ? (
-                  <p className="py-10 text-center text-xs text-slate-500">
+                  <p className="py-10 text-center text-xs text-stone-400">
                     No messages yet. Start the conversation!
                   </p>
                 ) : (
                   messages.map((m) => (
                     <div
                       key={m.id}
-                      className="rounded-lg border border-slate-800 bg-slate-950 p-2.5"
+                      className="rounded-xl border border-stone-200 bg-stone-50 p-2.5"
                     >
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-indigo-300">
+                        <span className="font-semibold text-emerald-800">
                           {m.senderName}
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-stone-400">
                           {new Date(m.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-200">{m.content}</p>
+                      <p className="mt-1 text-xs text-stone-800">{m.content}</p>
                     </div>
                   ))
                 )}
               </div>
               {peers.some((p) => p.peerId !== peerId && p.typing) && (
-                <p className="px-3 pb-1 text-[11px] italic text-slate-400">
+                <p className="px-3 pb-1 text-[11px] italic text-stone-500">
                   Someone is typing...
                 </p>
               )}
               <form
                 onSubmit={handleSendMessage}
-                className="flex gap-2 border-t border-slate-800 p-3"
+                className="flex gap-2 border-t border-stone-200 p-3"
               >
                 <input
                   type="text"
@@ -599,12 +599,12 @@ export default function MeetingRoomPage() {
                     setTyping(e.target.value.length > 0);
                   }}
                   placeholder="Send a message..."
-                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                  className="flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none"
                 />
                 <button
                   type="submit"
                   aria-label="Send message"
-                  className="rounded-lg bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700"
+                  className="rounded-xl bg-emerald-700 px-3 py-2 text-white hover:bg-emerald-800"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>
@@ -618,7 +618,7 @@ export default function MeetingRoomPage() {
                 value={sharedNotes}
                 onChange={(e) => setSharedNotes(e.target.value)}
                 placeholder="Shared meeting notes (saved when you leave)..."
-                className="flex-1 rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                className="flex-1 rounded-xl border border-stone-300 bg-stone-50/50 p-3 text-xs text-stone-900 focus:border-emerald-600 focus:outline-none"
               />
               <form onSubmit={handleCreateQuickTask} className="flex gap-2">
                 <input
@@ -626,11 +626,11 @@ export default function MeetingRoomPage() {
                   value={quickTaskTitle}
                   onChange={(e) => setQuickTaskTitle(e.target.value)}
                   placeholder="Quick Kanban task..."
-                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none"
+                  className="flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-900 focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Task
@@ -647,21 +647,21 @@ export default function MeetingRoomPage() {
               ).map((p) => (
                 <div
                   key={p.peerId}
-                  className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 px-3 py-2.5"
+                  className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5"
                 >
-                  <span className="text-xs font-medium text-white">
+                  <span className="text-xs font-medium text-stone-900">
                     {p.name} {p.peerId === peerId ? '(You)' : ''}
                   </span>
-                  <div className="flex items-center gap-2 text-slate-400">
+                  <div className="flex items-center gap-2">
                     {p.muted ? (
-                      <MicOff className="h-3.5 w-3.5 text-rose-400" />
+                      <MicOff className="h-3.5 w-3.5 text-rose-500" />
                     ) : (
-                      <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                      <Mic className="h-3.5 w-3.5 text-emerald-600" />
                     )}
                     {p.cameraOff ? (
-                      <VideoOff className="h-3.5 w-3.5 text-rose-400" />
+                      <VideoOff className="h-3.5 w-3.5 text-rose-500" />
                     ) : (
-                      <Video className="h-3.5 w-3.5 text-emerald-400" />
+                      <Video className="h-3.5 w-3.5 text-emerald-600" />
                     )}
                   </div>
                 </div>

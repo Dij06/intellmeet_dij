@@ -102,7 +102,9 @@ export default function MeetingDetailPage() {
     const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRec) {
-      setStatusMsg('Live speech recognition is supported in Chrome/Edge. You can still paste or type transcript text.');
+      setStatusMsg(
+        'Live speech recognition is supported in Chrome/Edge. You can still paste or type transcript text.'
+      );
       return;
     }
 
@@ -219,14 +221,18 @@ export default function MeetingDetailPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-300">Loading meeting intelligence...</div>;
+    return (
+      <div className="p-8 text-center text-stone-500">
+        Loading meeting intelligence...
+      </div>
+    );
   }
   if (!meeting) {
     return (
-      <div className="p-8 text-center text-slate-300">
+      <div className="p-8 text-center text-stone-600">
         Meeting not found.{' '}
-        <Link href="/dashboard" className="text-indigo-400 underline">
-          Back to Dashboard
+        <Link href="/dashboard" className="text-emerald-700 underline">
+          Back to Meetings Hub
         </Link>
       </div>
     );
@@ -236,24 +242,25 @@ export default function MeetingDetailPage() {
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-900"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-        Back to Dashboard
+        Back to Meetings Hub
       </Link>
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">{meeting.title}</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            {meeting.description || 'Post-meeting intelligence, transcript, and action items'}
+          <h1 className="text-3xl font-bold text-stone-900">{meeting.title}</h1>
+          <p className="mt-1 text-sm text-stone-500">
+            {meeting.description ||
+              'Post-meeting intelligence, transcript, and action items'}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/meetings/${meeting.id}/room`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 transition"
           >
             <Video className="h-4 w-4" aria-hidden="true" />
             Join Live Room
@@ -261,7 +268,7 @@ export default function MeetingDetailPage() {
           <button
             type="button"
             onClick={handleExportMarkdown}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 transition"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             Export .MD
@@ -269,7 +276,7 @@ export default function MeetingDetailPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 transition"
           >
             <Printer className="h-4 w-4" aria-hidden="true" />
             Print / PDF
@@ -278,23 +285,25 @@ export default function MeetingDetailPage() {
       </div>
 
       {statusMsg && (
-        <div className="mt-4 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-2.5 text-sm text-indigo-200">
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-900">
           {statusMsg}
         </div>
       )}
 
       {/* Transcript + AI Summary */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Meeting Transcript</h2>
+            <h2 className="text-lg font-semibold text-stone-900">
+              Meeting Transcript
+            </h2>
             <button
               type="button"
               onClick={toggleDictation}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition ${
                 dictating
                   ? 'bg-rose-600 text-white animate-pulse'
-                  : 'border border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800'
+                  : 'border border-stone-300 bg-stone-50 text-stone-700 hover:bg-stone-100'
               }`}
             >
               {dictating ? (
@@ -311,7 +320,7 @@ export default function MeetingDetailPage() {
             </button>
           </div>
           <textarea
-            className="h-56 w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+            className="h-56 w-full rounded-xl border border-stone-300 bg-stone-50/50 p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
             placeholder="Paste transcript or click 'Live Speech-to-Text' to dictate..."
             value={transcriptInput}
             onChange={(e) => setTranscriptInput(e.target.value)}
@@ -320,7 +329,7 @@ export default function MeetingDetailPage() {
             type="button"
             onClick={handleSummarize}
             disabled={summarizing}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 transition"
           >
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             {summarizing
@@ -329,16 +338,16 @@ export default function MeetingDetailPage() {
           </button>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5">
-          <h2 className="mb-3 text-lg font-semibold text-white">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold text-stone-900">
             AI Executive Summary
           </h2>
           {meeting.summary ? (
-            <div className="h-72 overflow-y-auto whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm text-slate-300 leading-relaxed">
+            <div className="h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50/60 p-4 text-sm text-stone-700 leading-relaxed">
               {meeting.summary}
             </div>
           ) : (
-            <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            <div className="flex h-72 items-center justify-center rounded-xl border border-dashed border-stone-300 p-6 text-center text-sm text-stone-400">
               No summary yet. Add a transcript and click Generate AI Summary to
               extract key points and Kanban action items.
             </div>
@@ -348,20 +357,20 @@ export default function MeetingDetailPage() {
 
       {/* Action Items & Shared Notes */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-stone-900">
               Extracted Action Items ({tasks.length})
             </h2>
             <Link
               href="/workspaces"
-              className="text-xs font-medium text-indigo-400 hover:underline"
+              className="text-xs font-semibold text-emerald-700 hover:underline"
             >
               Open Kanban Board →
             </Link>
           </div>
           {tasks.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">
+            <p className="py-6 text-center text-sm text-stone-400">
               Action items will appear here automatically after AI summarization.
             </p>
           ) : (
@@ -371,27 +380,27 @@ export default function MeetingDetailPage() {
                   key={task.id}
                   type="button"
                   onClick={() => cycleTaskStatus(task)}
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-800 bg-slate-950 p-3 text-left hover:border-indigo-500/40 transition"
+                  className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 p-3 text-left hover:border-emerald-300 transition"
                 >
                   <div className="flex items-center gap-3">
                     {task.status === 'DONE' ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                     ) : task.status === 'IN_PROGRESS' ? (
-                      <Clock className="h-4 w-4 text-amber-400 shrink-0" />
+                      <Clock className="h-4 w-4 text-amber-600 shrink-0" />
                     ) : (
-                      <Circle className="h-4 w-4 text-slate-500 shrink-0" />
+                      <Circle className="h-4 w-4 text-stone-400 shrink-0" />
                     )}
                     <div>
                       <p
                         className={`text-sm font-medium ${
                           task.status === 'DONE'
-                            ? 'line-through text-slate-500'
-                            : 'text-white'
+                            ? 'line-through text-stone-400'
+                            : 'text-stone-900'
                         }`}
                       >
                         {task.title}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-stone-500">
                         Assignee: {task.assigneeName || 'Unassigned'}
                       </p>
                     </div>
@@ -399,10 +408,10 @@ export default function MeetingDetailPage() {
                   <span
                     className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
                       task.priority === 'HIGH'
-                        ? 'bg-rose-500/15 text-rose-300'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
                         : task.priority === 'LOW'
-                          ? 'bg-slate-800 text-slate-400'
-                          : 'bg-amber-500/15 text-amber-300'
+                          ? 'bg-stone-100 text-stone-600'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
                     }`}
                   >
                     {task.priority}
@@ -413,21 +422,23 @@ export default function MeetingDetailPage() {
           )}
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Shared Meeting Notes</h2>
+            <h2 className="text-lg font-semibold text-stone-900">
+              Shared Meeting Notes
+            </h2>
             <button
               type="button"
               onClick={handleSaveNotes}
               disabled={savingNotes}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:opacity-50 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50 transition"
             >
               <Save className="h-3.5 w-3.5" aria-hidden="true" />
               {savingNotes ? 'Saving...' : 'Save Notes'}
             </button>
           </div>
           <textarea
-            className="h-48 w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+            className="h-48 w-full rounded-xl border border-stone-300 bg-stone-50/50 p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
             placeholder="Collaborative meeting notes, decisions, links..."
             value={sharedNotes}
             onChange={(e) => setSharedNotes(e.target.value)}
