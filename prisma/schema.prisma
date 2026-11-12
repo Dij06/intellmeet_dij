@@ -7,30 +7,90 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  password  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  meetings  Meeting[]
-}
-
-model Meeting {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  transcript  String?
-  summary     String?
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String            @id @default(cuid())
+  email      String            @unique
+  name       String?
+  password   String?
+  role       String            @default("MEMBER")
+  avatarUrl  String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  meetings   Meeting[]
+  workspaces WorkspaceMember[]
+  tasks      Task[]
+  messages   ChatMessage[]
 }
 
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     WorkspaceMember[]
+  meetings    Meeting[]
+  tasks       Task[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String    @default("MEMBER")
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Meeting {
+  id              String        @id @default(cuid())
+  title           String
+  description     String?
+  roomCode        String        @unique @default(cuid())
+  status          String        @default("SCHEDULED")
+  scheduledAt     DateTime?
+  durationMinutes Int           @default(30)
+  transcript      String?
+  summary         String?
+  sharedNotes     String?
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  workspaceId     String?
+  workspace       Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  tasks           Task[]
+  messages        ChatMessage[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  status       String     @default("TODO")
+  priority     String     @default("MEDIUM")
+  dueDate      DateTime?
+  meetingId    String?
+  meeting      Meeting?   @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  workspaceId  String?
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  assigneeId   String?
+  assignee     User?      @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeName String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  content    String
+  senderName String
+  meetingId  String
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
 }

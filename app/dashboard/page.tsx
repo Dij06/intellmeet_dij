@@ -1,36 +1,80 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Video,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  Calendar,
+  CheckSquare,
+  MessageSquare,
+} from 'lucide-react';
 
 interface Meeting {
   id: string;
   title: string;
   description: string | null;
+  status: string;
+  scheduledAt: string | null;
+  summary: string | null;
+  workspace?: { id: string; name: string } | null;
+  _count?: { tasks: number; messages: number };
   createdAt: string;
 }
 
+interface Workspace {
+  id: string;
+  name: string;
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [workspaceId, setWorkspaceId] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
-  useEffect(() => {
-    fetchMeetings();
-  }, []);
-
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
+    setFetching(true);
     try {
-      const res = await fetch('/api/meetings');
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('q', search.trim());
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
+
+      const res = await fetch(`/api/meetings?${params.toString()}`);
       const data = await res.json();
       if (data.meetings) {
         setMeetings(data.meetings);
       }
     } catch (error) {
       console.error('Error fetching meetings:', error);
+    } finally {
+      setFetching(false);
     }
-  };
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
+
+  useEffect(() => {
+    fetch('/api/workspace')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.workspaces) setWorkspaces(d.workspaces);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCreateMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,12 +85,18 @@ export default function DashboardPage() {
       const res = await fetch('/api/meetings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          workspaceId: workspaceId || null,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        }),
       });
 
       if (res.ok) {
         setTitle('');
         setDescription('');
+        setScheduledAt('');
         fetchMeetings();
       }
     } catch (error) {
@@ -56,62 +106,268 @@ export default function DashboardPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8 text-indigo-400">IntellMeet Dashboard</h1>
+  const handleInstantMeeting = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Instant Sync (${new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })})`,
+          description: 'Instant WebRTC video & AI collaboration room',
+          status: 'LIVE',
+          workspaceId: workspaces[0]?.id || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.meeting?.id) {
+        router.push(`/meetings/${data.meeting.id}/room`);
+      }
+    } catch (error) {
+      console.error('Error starting instant meeting:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      {/* Schedule Form */}
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl mb-8 shadow-lg">
-        <h2 className="text-xl font-semibold mb-4 text-slate-200">Schedule a New Meeting</h2>
-        <form onSubmit={handleCreateMeeting} className="space-y-4">
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMeetings((prev) => prev.filter((m) => m.id !== id));
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Meetings Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Schedule meetings, launch live WebRTC rooms, or review AI summaries.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleInstantMeeting}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition"
+        >
+          <Video className="h-4 w-4" aria-hidden="true" />
+          Start Instant Meeting
+        </button>
+      </div>
+
+      {/* Create / Schedule Meeting Form */}
+      <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-lg">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+          <Plus className="h-5 w-5 text-indigo-400" aria-hidden="true" />
+          Schedule a New Meeting
+        </h2>
+        <form onSubmit={handleCreateMeeting} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Meeting Title</label>
+            <label htmlFor="meeting-title" className="block text-xs font-medium text-slate-400 mb-1">
+              Meeting Title *
+            </label>
             <input
+              id="meeting-title"
               type="text"
-              className="w-full bg-slate-950 border border-slate-800 rounded p-3 text-white focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Q4 Strategy Sync"
+              placeholder="e.g. Q4 Architecture Review"
               required
             />
           </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Description</label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="meeting-ws" className="block text-xs font-medium text-slate-400 mb-1">
+                Workspace
+              </label>
+              <select
+                id="meeting-ws"
+                value={workspaceId}
+                onChange={(e) => setWorkspaceId(e.target.value)}
+                className="w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="">Personal / General</option>
+                {workspaces.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="meeting-date" className="block text-xs font-medium text-slate-400 mb-1">
+                Date &amp; Time
+              </label>
+              <input
+                id="meeting-date"
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="meeting-desc" className="block text-xs font-medium text-slate-400 mb-1">
+              Agenda / Description
+            </label>
             <textarea
-              className="w-full bg-slate-950 border border-slate-800 rounded p-3 text-white focus:outline-none focus:border-indigo-500"
+              id="meeting-desc"
+              rows={2}
+              className="w-full rounded-lg border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter brief agenda..."
+              placeholder="Key topics, goals, or participants..."
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded transition disabled:opacity-50"
-          >
-            {loading ? 'Creating...' : 'Create Meeting'}
-          </button>
-        </form>
-      </div>
 
-      {/* Scheduled Meetings List */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 text-slate-200">Your Scheduled Meetings</h2>
-        <div className="space-y-3">
-          {meetings.length === 0 ? (
-            <p className="text-slate-500">No meetings scheduled yet.</p>
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+            >
+              {loading ? 'Creating...' : 'Create Meeting'}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Search & Filter */}
+      <section className="mt-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold text-white">Meeting History &amp; Rooms</h2>
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-2.5 h-4 w-4 text-slate-500"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                aria-label="Search meetings"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search meetings..."
+                className="rounded-lg border border-slate-800 bg-slate-900 py-2 pl-9 pr-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <select
+              aria-label="Filter by meeting status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="LIVE">Live</option>
+              <option value="SCHEDULED">Scheduled</option>
+              <option value="ENDED">Ended</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {fetching ? (
+            <p className="py-8 text-center text-sm text-slate-400">Loading meetings...</p>
+          ) : meetings.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-sm text-slate-500">
+              No meetings found. Schedule one above or start an instant meeting!
+            </div>
           ) : (
             meetings.map((meeting) => (
-              <Link href={`/meetings/${meeting.id}`} key={meeting.id} className="block">
-                <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg hover:border-indigo-500 transition cursor-pointer shadow">
+              <div
+                key={meeting.id}
+                className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900/70 p-5 hover:border-indigo-500/40 transition sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ${
+                        meeting.status === 'LIVE'
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : meeting.status === 'ENDED'
+                            ? 'bg-slate-800 text-slate-300'
+                            : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
+                      }`}
+                    >
+                      {meeting.status}
+                    </span>
+                    {meeting.workspace && (
+                      <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+                        {meeting.workspace.name}
+                      </span>
+                    )}
+                    {meeting.summary && (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-300">
+                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                        AI Summarized
+                      </span>
+                    )}
+                  </div>
+
                   <h3 className="text-lg font-semibold text-white">{meeting.title}</h3>
-                  <p className="text-slate-400 text-sm mt-1">{meeting.description || 'No description'}</p>
+                  <p className="text-sm text-slate-400">
+                    {meeting.description || 'No agenda provided'}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                      {new Date(meeting.scheduledAt || meeting.createdAt).toLocaleString()}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
+                      {meeting._count?.tasks ?? 0} action items
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+                      {meeting._count?.messages ?? 0} messages
+                    </span>
+                  </div>
                 </div>
-              </Link>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/meetings/${meeting.id}/room`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                  >
+                    <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                    Join Room
+                  </Link>
+                  <Link
+                    href={`/meetings/${meeting.id}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    Summary &amp; Notes
+                  </Link>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${meeting.title}`}
+                    onClick={() => handleDelete(meeting.id)}
+                    className="rounded-lg border border-slate-700 p-2 text-slate-400 hover:border-rose-500/50 hover:text-rose-400 transition"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
             ))
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
