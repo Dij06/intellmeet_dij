@@ -83,13 +83,13 @@ export default function AnalyticsPage() {
     a.download = `intellmeet-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Analytics CSV exported successfully', 'success');
+    showToast('Analytics CSV exported', 'success');
   };
 
   if (loading || !data) {
     return (
-      <div className="mx-auto max-w-6xl p-12 text-center font-mono text-xs text-ink-500">
-        Aggregating system intelligence metrics...
+      <div className="mx-auto max-w-6xl p-12 text-center text-xs text-[var(--text-secondary)]">
+        Aggregating system analytics and metrics...
       </div>
     );
   }
@@ -101,17 +101,17 @@ export default function AnalyticsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 border-b-2 border-ink-950 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider text-coral">
-            <LineChart className="h-3.5 w-3.5" />
-            <span>Productivity &amp; Velocity Observability</span>
+          <div className="flex items-center gap-2 text-xs font-medium text-[var(--accent)]">
+            <LineChart className="h-4 w-4" />
+            <span>Productivity &amp; Insights</span>
           </div>
-          <h1 className="mt-1 font-sans text-3xl font-extrabold text-ink-950 sm:text-4xl">
-            System Analytics &amp; Insights
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+            Analytics &amp; Productivity
           </h1>
-          <p className="mt-1 text-xs text-ink-600">
-            Real-time reporting on meeting intelligence coverage, task velocity, and team workload.
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Observability on meeting coverage, task completion velocity, and team contributions.
           </p>
         </div>
 
@@ -119,74 +119,74 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={loadAnalytics}
-            className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-paper-50 px-3 py-2 text-xs font-bold text-ink-950 shadow-tactile-sm transition hover:bg-paper-200"
+            className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
             <span>Refresh</span>
           </button>
           <button
             type="button"
             onClick={handleExportCsv}
-            className="flex items-center gap-1.5 rounded-lg border-2 border-ink-950 bg-ink-950 px-4 py-2 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-ink-800 active:translate-x-0.5 active:translate-y-0.5"
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-3.5 py-1.5 text-xs font-medium text-[var(--bg-page)] hover:opacity-90 transition shadow-sm"
           >
-            <Download className="h-3.5 w-3.5 text-coral" />
-            <span>Export CSV Report</span>
+            <Download className="h-3.5 w-3.5 text-[var(--accent)]" />
+            <span>Export CSV</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Cards Strip */}
+      {/* KPI Cards */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
-          <div className="flex items-center justify-between font-mono text-[11px] font-bold uppercase text-ink-500">
-            <span>Meetings Archive</span>
-            <Video className="h-4 w-4 text-ink-900" />
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-medium text-[var(--text-secondary)]">
+            <span>Total Meetings</span>
+            <Video className="h-4 w-4" />
           </div>
-          <p className="mt-2 font-sans text-3xl font-black text-ink-950">
+          <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">
             {overview.totalMeetings}
           </p>
-          <p className="mt-1 font-mono text-[11px] text-ink-600">
-            {statusBreakdown.LIVE} live room(s) • {statusBreakdown.SCHEDULED} scheduled
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            {statusBreakdown.LIVE} live • {statusBreakdown.SCHEDULED} scheduled
           </p>
         </div>
 
-        <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
-          <div className="flex items-center justify-between font-mono text-[11px] font-bold uppercase text-ink-500">
-            <span>AI Coverage</span>
-            <Sparkles className="h-4 w-4 text-emeraldBrand" />
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-medium text-[var(--text-secondary)]">
+            <span>AI Summaries</span>
+            <Sparkles className="h-4 w-4 text-[var(--success)]" />
           </div>
-          <p className="mt-2 font-sans text-3xl font-black text-emeraldBrand">
+          <p className="mt-2 text-3xl font-bold text-[var(--success)]">
             {overview.totalMeetings > 0
               ? Math.round((overview.summarizedMeetings / overview.totalMeetings) * 100)
               : 0}%
           </p>
-          <p className="mt-1 font-mono text-[11px] text-ink-600">
-            {overview.summarizedMeetings} of {overview.totalMeetings} calls synthesized
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            {overview.summarizedMeetings} of {overview.totalMeetings} meetings synthesized
           </p>
         </div>
 
-        <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
-          <div className="flex items-center justify-between font-mono text-[11px] font-bold uppercase text-ink-500">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-medium text-[var(--text-secondary)]">
             <span>Task Completion</span>
-            <CheckCircle2 className="h-4 w-4 text-coral" />
+            <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
           </div>
-          <p className="mt-2 font-sans text-3xl font-black text-coral">
+          <p className="mt-2 text-3xl font-bold text-[var(--accent)]">
             {overview.completionRate}%
           </p>
-          <p className="mt-1 font-mono text-[11px] text-ink-600">
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
             {overview.completedTasks} / {overview.totalTasks} action items closed
           </p>
         </div>
 
-        <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
-          <div className="flex items-center justify-between font-mono text-[11px] font-bold uppercase text-ink-500">
-            <span>Tracked Time</span>
-            <Clock className="h-4 w-4 text-ink-900" />
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-medium text-[var(--text-secondary)]">
+            <span>Meeting Minutes</span>
+            <Clock className="h-4 w-4" />
           </div>
-          <p className="mt-2 font-sans text-3xl font-black text-ink-950">
+          <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">
             {overview.totalMinutes}m
           </p>
-          <p className="mt-1 font-mono text-[11px] text-ink-600">
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
             {overview.messageCount} chat interactions logged
           </p>
         </div>
@@ -195,30 +195,30 @@ export default function AnalyticsPage() {
       {/* Charts & Breakdown Grid */}
       <div className="mt-6 grid gap-6 lg:grid-cols-12">
         {/* Action Items by Priority */}
-        <div className="lg:col-span-6 rounded-2xl border-2 border-ink-950 bg-paper-50 p-6 shadow-tactile">
-          <div className="flex items-center justify-between border-b border-ink-900/10 pb-3">
-            <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
+        <div className="lg:col-span-6 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
               Action Items By Priority
             </h2>
-            <span className="font-mono text-xs text-ink-500">
-              {overview.totalTasks} total tasks
+            <span className="text-xs text-[var(--text-secondary)] font-mono">
+              {overview.totalTasks} tasks
             </span>
           </div>
 
           <div className="mt-5 space-y-4">
             {[
-              { label: 'High Priority', count: priorityBreakdown.HIGH, barColor: 'bg-coral' },
-              { label: 'Medium Priority', count: priorityBreakdown.MEDIUM, barColor: 'bg-amberBrand' },
-              { label: 'Low Priority', count: priorityBreakdown.LOW, barColor: 'bg-ink-400' },
+              { label: 'High Priority', count: priorityBreakdown.HIGH, barColor: 'bg-[var(--accent)]' },
+              { label: 'Medium Priority', count: priorityBreakdown.MEDIUM, barColor: 'bg-[var(--warning)]' },
+              { label: 'Low Priority', count: priorityBreakdown.LOW, barColor: 'bg-[var(--text-secondary)]' },
             ].map((p) => (
               <div key={p.label}>
-                <div className="mb-1 flex justify-between font-mono text-xs text-ink-700">
-                  <span className="font-bold">{p.label}</span>
-                  <span className="font-extrabold text-ink-950">{p.count}</span>
+                <div className="mb-1.5 flex justify-between text-xs text-[var(--text-secondary)]">
+                  <span>{p.label}</span>
+                  <span className="font-semibold text-[var(--text-primary)]">{p.count}</span>
                 </div>
-                <div className="h-3 w-full rounded-full bg-paper-200 border border-ink-900/15 overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-[var(--bg-surface-hover)] overflow-hidden">
                   <div
-                    className={`h-full ${p.barColor} transition-all`}
+                    className={`h-full ${p.barColor} transition-all duration-300`}
                     style={{ width: `${Math.round((p.count / maxPriority) * 100)}%` }}
                   />
                 </div>
@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
 
-          <div className="mt-6 border-t border-ink-900/10 pt-4 flex justify-between font-mono text-[11px] text-ink-500">
+          <div className="mt-6 border-t border-[var(--border)] pt-4 flex justify-between text-xs text-[var(--text-secondary)]">
             <span>To Do: {overview.todoTasks}</span>
             <span>In Progress: {overview.inProgressTasks}</span>
             <span>Done: {overview.completedTasks}</span>
@@ -234,28 +234,28 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Meeting Status Breakdown */}
-        <div className="lg:col-span-6 rounded-2xl border-2 border-ink-950 bg-paper-50 p-6 shadow-tactile">
-          <div className="flex items-center justify-between border-b border-ink-900/10 pb-3">
-            <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
-              Meeting Status Distribution
+        <div className="lg:col-span-6 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+              Meeting Status Breakdown
             </h2>
-            <span className="font-mono text-xs text-ink-500">Lifecycle State</span>
+            <span className="text-xs text-[var(--text-secondary)] font-mono">Lifecycle</span>
           </div>
 
           <div className="mt-5 space-y-4">
             {[
-              { label: 'Active Live Rooms', count: statusBreakdown.LIVE, barColor: 'bg-coral' },
-              { label: 'Scheduled Upcoming', count: statusBreakdown.SCHEDULED, barColor: 'bg-emeraldBrand' },
-              { label: 'Ended & Archived', count: statusBreakdown.ENDED, barColor: 'bg-ink-600' },
+              { label: 'Live Video Rooms', count: statusBreakdown.LIVE, barColor: 'bg-[var(--accent)]' },
+              { label: 'Scheduled Upcoming', count: statusBreakdown.SCHEDULED, barColor: 'bg-[var(--success)]' },
+              { label: 'Ended & Archived', count: statusBreakdown.ENDED, barColor: 'bg-[var(--text-secondary)]' },
             ].map((s) => (
               <div key={s.label}>
-                <div className="mb-1 flex justify-between font-mono text-xs text-ink-700">
-                  <span className="font-bold">{s.label}</span>
-                  <span className="font-extrabold text-ink-950">{s.count}</span>
+                <div className="mb-1.5 flex justify-between text-xs text-[var(--text-secondary)]">
+                  <span>{s.label}</span>
+                  <span className="font-semibold text-[var(--text-primary)]">{s.count}</span>
                 </div>
-                <div className="h-3 w-full rounded-full bg-paper-200 border border-ink-900/15 overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-[var(--bg-surface-hover)] overflow-hidden">
                   <div
-                    className={`h-full ${s.barColor} transition-all`}
+                    className={`h-full ${s.barColor} transition-all duration-300`}
                     style={{ width: `${Math.round((s.count / maxStatus) * 100)}%` }}
                   />
                 </div>
@@ -263,42 +263,42 @@ export default function AnalyticsPage() {
             ))}
           </div>
 
-          <div className="mt-6 border-t border-ink-900/10 pt-4 flex justify-between font-mono text-[11px] text-ink-500">
+          <div className="mt-6 border-t border-[var(--border)] pt-4 flex justify-between text-xs text-[var(--text-secondary)]">
             <span>Workspaces: {overview.workspaceCount}</span>
-            <span>Total Sync: Real-time PostgreSQL</span>
+            <span>Sync: Real-time PostgreSQL</span>
           </div>
         </div>
 
         {/* Contributor Leaderboard */}
-        <div className="lg:col-span-12 rounded-2xl border-2 border-ink-950 bg-paper-50 p-6 shadow-tactile">
-          <div className="flex items-center justify-between border-b border-ink-900/10 pb-3">
+        <div className="lg:col-span-12 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-ink-900" />
-              <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
+              <Users className="h-4 w-4 text-[var(--text-secondary)]" />
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
                 Action Item Ownership Distribution
               </h2>
             </div>
-            <span className="font-mono text-xs text-ink-500">By Assignee</span>
+            <span className="text-xs text-[var(--text-secondary)] font-mono">By Assignee</span>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             {topContributors.length === 0 ? (
-              <p className="col-span-full py-6 text-center font-mono text-xs text-ink-400">
+              <p className="col-span-full py-6 text-center text-xs text-[var(--text-secondary)]">
                 No assigned tasks recorded yet.
               </p>
             ) : (
               topContributors.map((c) => (
                 <div
                   key={c.name}
-                  className="flex items-center justify-between rounded-xl border border-ink-900/20 bg-paper-100 p-3 shadow-tactile-sm"
+                  className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-3"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink-950 text-paper-50 font-mono text-xs font-bold">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--text-primary)] text-[var(--bg-page)] font-mono text-xs font-semibold">
                       {c.name.slice(0, 1).toUpperCase()}
                     </div>
-                    <span className="font-sans text-xs font-bold text-ink-950">{c.name}</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{c.name}</span>
                   </div>
-                  <span className="rounded bg-paper-50 border border-ink-900/20 px-2 py-0.5 font-mono text-[11px] font-bold text-coral">
+                  <span className="rounded bg-[var(--bg-surface)] border border-[var(--border)] px-2 py-0.5 text-[11px] font-medium text-[var(--accent)]">
                     {c.taskCount} tasks
                   </span>
                 </div>

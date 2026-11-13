@@ -3,19 +3,65 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8f7f4;
-  --foreground: #111216;
+  --bg-page: #F8F7F4;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-subtle: #F0ECE4;
+  --text-primary: #111111;
+  --text-secondary: #626B7A;
+  --text-muted: #8E95A2;
+  --border: #E5E2DC;
+  --border-focus: #111111;
+  --accent: #FF513D;
+  --accent-hover: #E64431;
+  --accent-subtle: #FFF1EE;
+  --accent-text: #B82F19;
+  --success: #079B72;
+  --success-subtle: #E6F7F2;
+  --success-text: #04654A;
+  --warning: #D97706;
+  --warning-subtle: #FEF3C7;
+  --warning-text: #92400E;
+
+  --background: var(--bg-page);
+  --foreground: var(--text-primary);
+}
+
+.dark {
+  --bg-page: #101114;
+  --bg-surface: #191B20;
+  --bg-surface-elevated: #22252B;
+  --bg-subtle: #1C1F26;
+  --text-primary: #F5F5F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --border: #30333A;
+  --border-focus: #F5F5F5;
+  --accent: #FF604D;
+  --accent-hover: #FF7261;
+  --accent-subtle: #2A1B19;
+  --accent-text: #FFA094;
+  --success: #10B981;
+  --success-subtle: #132B23;
+  --success-text: #6EE7B7;
+  --warning: #F59E0B;
+  --warning-subtle: #2B2313;
+  --warning-text: #FCD34D;
+
+  --background: var(--bg-page);
+  --foreground: var(--text-primary);
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* Custom crisp minimal scrollbars */
+/* Subtle, modern scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -24,17 +70,24 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5df;
+  background: var(--border);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9da3b4;
+  background: var(--text-secondary);
 }
 
-/* Selection */
+/* Text Selection */
 ::selection {
-  background-color: #ff4d2d;
+  background-color: var(--accent);
   color: #ffffff;
+}
+
+/* Focus styling */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 1px var(--border-focus);
 }
 
 @media print {
@@ -47,5 +100,10 @@ body {
   body {
     background: #ffffff !important;
     color: #000000 !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
   }
 }

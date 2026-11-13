@@ -18,7 +18,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: 'IntellMeet — AI-Powered Enterprise Meeting & Collaboration Platform',
   description:
-    'Real-time WebRTC video meetings, live transcription, AI summaries, smart action item extraction, Kanban workspaces, and enterprise analytics.',
+    'Turn meeting recordings into clear notes, actionable tasks, and structured summaries with real-time video collaboration.',
 };
 
 export default function RootLayout({
@@ -27,9 +27,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('intellmeet_theme');var d=t==='dark'||(!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches;if(d){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[#FAF8F5] text-stone-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] antialiased transition-colors duration-150`}
       >
         <Providers>
           <Navbar />

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, User, Sparkles, ArrowRight } from 'lucide-react';
+import { Lock, Mail, User, Sparkles, ArrowRight, Video } from 'lucide-react';
 import { useToast } from '@/app/components/Toast';
 
 export default function LoginPage() {
@@ -63,13 +63,12 @@ export default function LoginPage() {
   const handleDemoAccess = async () => {
     setLoading(true);
     try {
-      // Sign in automatically as built-in demo user
       const res = await signIn('credentials', {
         email: 'demo@intellmeet.com',
         redirect: false,
       });
       if (res?.ok) {
-        showToast('Signed in as Demo User (Full Access)', 'success');
+        showToast('Signed in as Demo User', 'success');
       } else {
         showToast('Entering Demo Mode', 'info');
       }
@@ -83,36 +82,38 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-60px)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-2xl border-2 border-ink-950 bg-paper-50 p-7 shadow-tactile-lg">
+    <div className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-7 shadow-sm">
         {/* Header */}
-        <div className="border-b border-ink-900/10 pb-5">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral">
-              Authentication Portal
+        <div className="border-b border-[var(--border)] pb-5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--text-primary)] text-[var(--bg-page)]">
+              <Video className="h-3.5 w-3.5" />
             </span>
-            <span className="font-mono text-[10px] text-ink-500">JWT • Bcrypt • Neon</span>
+            <span className="font-sans font-bold text-base text-[var(--text-primary)]">
+              intell<span className="text-[var(--accent)]">meet</span>
+            </span>
           </div>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink-950">
-            {mode === 'login' ? 'Sign into IntellMeet' : 'Create an Account'}
+          <h1 className="mt-3 text-xl font-bold tracking-tight text-[var(--text-primary)]">
+            {mode === 'login' ? 'Sign into your account' : 'Create an account'}
           </h1>
-          <p className="mt-1 text-xs text-ink-600">
-            Access enterprise video rooms, AI summaries, and synced Kanban boards.
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            Access enterprise meetings, transcription, and collaborative tasks.
           </p>
         </div>
 
         {/* Mode Switcher */}
-        <div className="mt-5 grid grid-cols-2 gap-1 rounded-lg border border-ink-950 bg-paper-200 p-1">
+        <div className="mt-5 grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-1">
           <button
             type="button"
             onClick={() => {
               setMode('login');
               setError('');
             }}
-            className={`rounded-md py-1.5 text-xs font-bold transition ${
+            className={`rounded-md py-1.5 text-xs font-medium transition ${
               mode === 'login'
-                ? 'bg-ink-950 text-paper-50 shadow-tactile-sm'
-                : 'text-ink-700 hover:text-ink-950'
+                ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             Sign In
@@ -123,10 +124,10 @@ export default function LoginPage() {
               setMode('register');
               setError('');
             }}
-            className={`rounded-md py-1.5 text-xs font-bold transition ${
+            className={`rounded-md py-1.5 text-xs font-medium transition ${
               mode === 'register'
-                ? 'bg-ink-950 text-paper-50 shadow-tactile-sm'
-                : 'text-ink-700 hover:text-ink-950'
+                ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             Register
@@ -136,7 +137,7 @@ export default function LoginPage() {
         {error && (
           <div
             role="alert"
-            className="mt-4 rounded-lg border border-coral bg-coral-subtle px-3 py-2 text-xs font-medium text-coral-dark"
+            className="mt-4 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs font-medium text-[var(--accent)]"
           >
             {error}
           </div>
@@ -147,19 +148,19 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="user-name"
-                className="block font-mono text-[11px] font-bold uppercase text-ink-700"
+                className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
               >
-                Your Name
+                Full Name
               </label>
-              <div className="relative mt-1">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" aria-hidden="true" />
+              <div className="relative">
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                 <input
                   id="user-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Maya Chen"
-                  className="w-full rounded-lg border border-ink-900/30 bg-paper-50 py-2 pl-9 pr-3 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-page)] py-2 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]"
                   required
                 />
               </div>
@@ -169,19 +170,19 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="user-email"
-              className="block font-mono text-[11px] font-bold uppercase text-ink-700"
+              className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
             >
               Email Address
             </label>
-            <div className="relative mt-1">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" aria-hidden="true" />
+            <div className="relative">
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               <input
                 id="user-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@team.com"
-                className="w-full rounded-lg border border-ink-900/30 bg-paper-50 py-2 pl-9 pr-3 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
+                placeholder="name@company.com"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-page)] py-2 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]"
                 required
               />
             </div>
@@ -190,12 +191,12 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="user-password"
-              className="block font-mono text-[11px] font-bold uppercase text-ink-700"
+              className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
             >
               Password
             </label>
-            <div className="relative mt-1">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" aria-hidden="true" />
+            <div className="relative">
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               <input
                 id="user-password"
                 type="password"
@@ -203,7 +204,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
-                className="w-full rounded-lg border border-ink-900/30 bg-paper-50 py-2 pl-9 pr-3 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-page)] py-2 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]"
                 required
               />
             </div>
@@ -212,32 +213,29 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-ink-950 bg-ink-950 py-2.5 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-ink-800 disabled:opacity-50 active:translate-x-0.5 active:translate-y-0.5"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--text-primary)] py-2.5 text-xs font-medium text-[var(--bg-page)] hover:opacity-90 transition shadow-sm disabled:opacity-50"
           >
             {loading ? (
               'Processing...'
             ) : (
               <>
-                <span>{mode === 'login' ? 'Authenticate' : 'Complete Registration'}</span>
+                <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </>
             )}
           </button>
         </form>
 
-        {/* Demo Mode Direct Link */}
-        <div className="mt-5 border-t border-ink-900/10 pt-4">
-          <p className="text-center font-mono text-[10px] text-ink-500 mb-2">
-            EVALUATION / GUEST ACCESS
-          </p>
+        {/* Demo Mode Button */}
+        <div className="mt-5 border-t border-[var(--border)] pt-4">
           <button
             type="button"
             onClick={handleDemoAccess}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-ink-950 bg-paper-100 py-2 text-xs font-bold text-ink-950 shadow-tactile-sm transition hover:bg-paper-200 active:translate-x-0.5 active:translate-y-0.5"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] py-2 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition"
           >
-            <Sparkles className="h-3.5 w-3.5 text-coral" aria-hidden="true" />
-            <span>Launch Instant Demo Mode (No Sign-Up)</span>
+            <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+            <span>Instant Demo Mode (No sign-up required)</span>
           </button>
         </div>
       </div>

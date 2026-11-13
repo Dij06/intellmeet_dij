@@ -118,7 +118,7 @@ export default function MeetingRoomPage() {
     async function initMedia() {
       if (!navigator.mediaDevices?.getUserMedia) {
         setCameraOff(true);
-        showToast('Camera/Mic unsupported in this environment. Running audio-less mode.', 'info');
+        showToast('Camera/Mic unsupported in this environment. Audio-less demo mode.', 'info');
         return;
       }
       try {
@@ -136,7 +136,7 @@ export default function MeetingRoomPage() {
         }
       } catch {
         setCameraOff(true);
-        showToast('No camera detected or permission denied. Running in audio-less demo mode.', 'info');
+        showToast('No camera detected or permission denied. Running in demo mode.', 'info');
       }
     }
     initMedia();
@@ -222,108 +222,127 @@ export default function MeetingRoomPage() {
     if (screenSharing) {
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
+      setScreenSharing(false);
       if (localVideoRef.current && localStreamRef.current) {
         localVideoRef.current.srcObject = localStreamRef.current;
       }
-      setScreenSharing(false);
-      showToast('Screen sharing stopped', 'info');
+      showToast('Screen sharing ended', 'info');
       return;
     }
 
     try {
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      screenStreamRef.current = screen;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = screen;
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        showToast('Screen sharing not supported on this device/browser', 'error');
+        return;
       }
-      screen.getVideoTracks()[0].onended = () => {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+      screenStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      setScreenSharing(true);
+      showToast('Screen sharing active', 'success');
+
+      stream.getVideoTracks()[0].onended = () => {
         setScreenSharing(false);
         if (localVideoRef.current && localStreamRef.current) {
           localVideoRef.current.srcObject = localStreamRef.current;
         }
       };
-      setScreenSharing(true);
-      showToast('Screen sharing active', 'success');
     } catch {
-      showToast('Screen sharing cancelled or unsupported', 'error');
+      showToast('Screen share cancelled', 'info');
     }
   };
 
   const toggleRecording = () => {
-    if (recording && recorderRef.current) {
-      recorderRef.current.stop();
+    if (recording) {
+      if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+        recorderRef.current.stop();
+      }
       setRecording(false);
-      showToast('Recording saved & downloaded', 'success');
+      showToast('Meeting recording saved and downloaded', 'success');
       return;
     }
 
-    const streamToRecord = screenStreamRef.current || localStreamRef.current;
-    if (!streamToRecord) {
-      showToast('Enable camera or screen share before recording', 'error');
+    const stream = screenStreamRef.current || localStreamRef.current;
+    if (!stream) {
+      showToast('No active stream to record', 'error');
       return;
     }
 
     try {
       recordedChunksRef.current = [];
-      const recorder = new MediaRecorder(streamToRecord);
-      recorder.ondataavailable = (e) => {
+      const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      rec.ondataavailable = (e) => {
         if (e.data.size > 0) recordedChunksRef.current.push(e.data);
       };
-      recorder.onstop = () => {
+      rec.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `intellmeet-session-${meetingId}.webm`;
+        a.download = `meeting-${meetingId.slice(0, 8)}-${Date.now()}.webm`;
         a.click();
         URL.revokeObjectURL(url);
       };
-      recorder.start();
-      recorderRef.current = recorder;
+      rec.start(1000);
+      recorderRef.current = rec;
       setRecording(true);
-      showToast('Recording started... Click again to stop & save', 'info');
+      showToast('Recording started. Video will download upon stopping.', 'info');
     } catch {
-      showToast('Recording unsupported in this browser', 'error');
+      showToast('Failed to start recorder in this browser', 'error');
     }
   };
 
   const toggleCaptions = () => {
-    if (captionsOn && recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (captionsOn) {
+      recognitionRef.current?.stop();
       setCaptionsOn(false);
-      showToast('Live captions turned off', 'info');
+      showToast('Live captions stopped', 'info');
       return;
     }
+
     const win = window as unknown as {
       SpeechRecognition?: new () => SpeechRecognitionLike;
       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
     };
     const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
+
     if (!SpeechRec) {
-      showToast('Speech recognition requires Chrome/Edge', 'error');
+      showToast('Browser Speech Recognition not supported in this browser.', 'error');
       return;
     }
-    const rec = new SpeechRec();
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.lang = 'en-US';
-    rec.onresult = (e) => {
-      const text = e.results[e.results.length - 1]?.[0]?.transcript?.trim();
-      if (text) {
-        setTranscriptLines((prev) => [...prev.slice(-20), `${displayName}: ${text}`]);
-      }
-    };
-    rec.onerror = () => setCaptionsOn(false);
-    rec.onend = () => setCaptionsOn(false);
-    rec.start();
-    recognitionRef.current = rec;
-    setCaptionsOn(true);
-    showToast('Live speech captions activated', 'success');
+
+    try {
+      const rec = new SpeechRec();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
+      rec.onresult = (event) => {
+        const last = event.results[event.results.length - 1];
+        const line = last?.[0]?.transcript?.trim();
+        if (line) {
+          setTranscriptLines((prev) => [...prev.slice(-15), line]);
+        }
+      };
+      rec.onerror = () => setCaptionsOn(false);
+      rec.onend = () => setCaptionsOn(false);
+      rec.start();
+      recognitionRef.current = rec;
+      setCaptionsOn(true);
+      showToast('Live speech captions active', 'success');
+    } catch {
+      showToast('Could not initialize speech recognizer', 'error');
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
+
     const content = chatInput.trim();
     setChatInput('');
     setTyping(false);
@@ -340,13 +359,14 @@ export default function MeetingRoomPage() {
         channelRef.current?.postMessage({ type: 'chat', message: data.message });
       }
     } catch {
-      showToast('Failed to deliver chat', 'error');
+      showToast('Failed to send message', 'error');
     }
   };
 
   const handleCreateQuickTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickTaskTitle.trim()) return;
+
     const title = quickTaskTitle.trim();
     setQuickTaskTitle('');
     try {
@@ -360,7 +380,7 @@ export default function MeetingRoomPage() {
           priority: 'MEDIUM',
         }),
       });
-      showToast(`Task "${title}" dispatched to Kanban!`, 'success');
+      showToast(`Task "${title}" dispatched to workspace board!`, 'success');
     } catch {
       showToast('Failed to create task', 'error');
     }
@@ -369,7 +389,7 @@ export default function MeetingRoomPage() {
   const handleCopyInvite = () => {
     navigator.clipboard.writeText(window.location.href);
     setLinkCopied(true);
-    showToast('Room link copied! Share with colleagues to test peer sync.', 'success');
+    showToast('Meeting link copied! Share with colleagues to join.', 'success');
     setTimeout(() => setLinkCopied(false), 2500);
   };
 
@@ -392,20 +412,20 @@ export default function MeetingRoomPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-ink-950 bg-paper-50 px-5 py-3.5 shadow-tactile">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-5 py-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <span className="flex h-3 w-3 rounded-full bg-coral animate-pulse" />
+          <span className="flex h-2.5 w-2.5 rounded-full bg-[var(--accent)] animate-pulse" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-sans text-base font-extrabold text-ink-950 sm:text-lg">
+              <h1 className="text-base font-bold text-[var(--text-primary)]">
                 {meetingTitle}
               </h1>
-              <span className="rounded bg-coral px-1.5 py-0.2 font-mono text-[9px] font-bold text-paper-50 uppercase">
+              <span className="rounded bg-[var(--accent)]/15 px-2 py-0.5 text-[10px] font-semibold text-[var(--accent)] uppercase">
                 LIVE
               </span>
             </div>
-            <p className="font-mono text-[11px] text-ink-500">
-              Room ID: {meetingId} • {Math.max(1, peers.length)} peer(s) connected
+            <p className="text-xs text-[var(--text-secondary)]">
+              Room ID: {meetingId.slice(0, 8)} • {Math.max(1, peers.length)} participant(s)
             </p>
           </div>
         </div>
@@ -414,38 +434,38 @@ export default function MeetingRoomPage() {
           <button
             type="button"
             onClick={handleCopyInvite}
-            className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-paper-100 px-3 py-1.5 font-mono text-xs font-bold text-ink-950 hover:bg-paper-200 transition"
+            className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition"
           >
-            {linkCopied ? <Check className="h-3.5 w-3.5 text-emeraldBrand" /> : <Copy className="h-3.5 w-3.5" />}
-            <span>{linkCopied ? 'Link Copied' : 'Invite Link'}</span>
+            {linkCopied ? <Check className="h-3.5 w-3.5 text-[var(--success)]" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{linkCopied ? 'Link Copied' : 'Invite link'}</span>
           </button>
 
-          <div className="flex items-center gap-1">
-            <span className="font-mono text-[10px] text-ink-500 uppercase">You:</span>
+          <div className="flex items-center gap-1.5 pl-2 border-l border-[var(--border)]">
+            <span className="text-xs text-[var(--text-secondary)]">You:</span>
             <input
               type="text"
               aria-label="Your display name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-32 rounded border border-ink-900/30 bg-paper-50 px-2 py-1 text-xs font-bold text-ink-950 focus:border-ink-950 focus:outline-none"
+              className="w-28 rounded-md border border-[var(--border)] bg-[var(--bg-page)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] focus:outline-none"
             />
           </div>
 
           <Link
             href={`/meetings/${meetingId}`}
-            className="flex items-center gap-1 rounded-lg border border-ink-950 bg-paper-50 px-3 py-1.5 text-xs font-bold text-ink-950 hover:bg-paper-200"
+            className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition"
           >
-            <Sparkles className="h-3.5 w-3.5 text-emeraldBrand" />
-            <span>AI Synthesis</span>
+            <Sparkles className="h-3.5 w-3.5 text-[var(--success)]" />
+            <span>AI Notes</span>
           </Link>
         </div>
       </div>
 
-      {/* Main Grid: Video Stage + Interactive Panel */}
+      {/* Main Grid: Video Stage + Collaboration Sidebar */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Video Stage */}
         <div className="lg:col-span-8 space-y-3">
-          <div className="relative aspect-video overflow-hidden rounded-2xl border-2 border-ink-950 bg-ink-950 shadow-tactile flex items-center justify-center">
+          <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--border)] bg-[#0d0e12] shadow-sm flex items-center justify-center">
             <video
               ref={localVideoRef}
               autoPlay
@@ -454,87 +474,97 @@ export default function MeetingRoomPage() {
               className={`h-full w-full object-cover ${cameraOff && !screenSharing ? 'hidden' : ''}`}
             />
             {cameraOff && !screenSharing && (
-              <div className="flex flex-col items-center gap-3 text-paper-200">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-paper-50 bg-ink-900 font-mono text-2xl font-black text-coral shadow-tactile-sm">
+              <div className="flex flex-col items-center gap-3 text-neutral-300">
+                <div className="flex h-18 w-18 items-center justify-center rounded-2xl bg-neutral-800 text-xl font-bold text-[var(--accent)]">
                   {displayName.slice(0, 2).toUpperCase()}
                 </div>
-                <p className="font-sans text-sm font-bold text-paper-50">{displayName}</p>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-ink-400">
-                  Camera Feed Inactive
+                <p className="text-sm font-semibold text-white">{displayName}</p>
+                <span className="text-xs text-neutral-500">
+                  Camera feed inactive
                 </span>
               </div>
             )}
 
             {/* Live speech captions overlay */}
             {captionsOn && (
-              <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-paper-50/20 bg-ink-950/90 backdrop-blur px-4 py-2 text-xs font-mono text-paper-100 shadow-tactile">
-                <span className="font-bold text-coral uppercase tracking-wider">[Live Captions]: </span>
+              <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-black/80 backdrop-blur border border-white/10 px-4 py-2.5 text-xs text-white">
+                <span className="font-semibold text-[var(--accent)]">[Live Captions]: </span>
                 <span>{transcriptLines[transcriptLines.length - 1] || 'Listening for speech input...'}</span>
               </div>
             )}
           </div>
 
           {/* Meeting Control Console */}
-          <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border-2 border-ink-950 bg-paper-50 p-3 shadow-tactile">
+          <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-sm">
             <button
               type="button"
               onClick={toggleMute}
-              className={`flex items-center gap-1.5 rounded-lg border-2 border-ink-950 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                muted ? 'bg-coral text-paper-50' : 'bg-paper-100 text-ink-950 hover:bg-paper-200'
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                muted
+                  ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                  : 'border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
               }`}
             >
-              {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4 text-emeraldBrand" />}
+              {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4 text-[var(--success)]" />}
               <span>{muted ? 'Unmute' : 'Mute'}</span>
             </button>
 
             <button
               type="button"
               onClick={toggleCamera}
-              className={`flex items-center gap-1.5 rounded-lg border-2 border-ink-950 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                cameraOff ? 'bg-coral text-paper-50' : 'bg-paper-100 text-ink-950 hover:bg-paper-200'
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                cameraOff
+                  ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                  : 'border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
               }`}
             >
-              {cameraOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4 text-emeraldBrand" />}
+              {cameraOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4 text-[var(--success)]" />}
               <span>{cameraOff ? 'Start Video' : 'Stop Video'}</span>
             </button>
 
             <button
               type="button"
               onClick={toggleScreenShare}
-              className={`flex items-center gap-1.5 rounded-lg border-2 border-ink-950 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                screenSharing ? 'bg-ink-950 text-paper-50' : 'bg-paper-100 text-ink-950 hover:bg-paper-200'
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                screenSharing
+                  ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-page)]'
+                  : 'border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
               }`}
             >
-              {screenSharing ? <MonitorOff className="h-4 w-4 text-coral" /> : <MonitorUp className="h-4 w-4" />}
+              {screenSharing ? <MonitorOff className="h-4 w-4 text-[var(--accent)]" /> : <MonitorUp className="h-4 w-4" />}
               <span>{screenSharing ? 'Stop Share' : 'Share Screen'}</span>
             </button>
 
             <button
               type="button"
               onClick={toggleRecording}
-              className={`flex items-center gap-1.5 rounded-lg border-2 border-ink-950 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                recording ? 'bg-coral text-paper-50 animate-pulse' : 'bg-paper-100 text-ink-950 hover:bg-paper-200'
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                recording
+                  ? 'border-[var(--accent)] bg-[var(--accent)] text-white animate-pulse'
+                  : 'border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
               }`}
             >
-              {recording ? <Square className="h-4 w-4" /> : <CircleDot className="h-4 w-4 text-coral" />}
-              <span>{recording ? 'Stop & Save' : 'Record Call'}</span>
+              {recording ? <Square className="h-4 w-4" /> : <CircleDot className="h-4 w-4 text-[var(--accent)]" />}
+              <span>{recording ? 'Stop & Save' : 'Record'}</span>
             </button>
 
             <button
               type="button"
               onClick={toggleCaptions}
-              className={`flex items-center gap-1.5 rounded-lg border-2 border-ink-950 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                captionsOn ? 'bg-emeraldBrand text-paper-50' : 'bg-paper-100 text-ink-950 hover:bg-paper-200'
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                captionsOn
+                  ? 'border-[var(--success)] bg-[var(--success)] text-white'
+                  : 'border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              <span>{captionsOn ? 'Captions Active' : 'Live Captions'}</span>
+              <span>{captionsOn ? 'Captions On' : 'Live Captions'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleLeaveAndSummarize}
-              className="flex items-center gap-1.5 rounded-lg border-2 border-ink-950 bg-ink-950 px-4 py-2 text-xs font-bold uppercase tracking-wider text-coral shadow-tactile transition hover:bg-ink-800"
+              className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 shadow-sm transition"
             >
               <PhoneOff className="h-4 w-4" />
               <span>Leave &amp; Summarize</span>
@@ -543,37 +573,43 @@ export default function MeetingRoomPage() {
         </div>
 
         {/* Collaboration Sidebar */}
-        <div className="lg:col-span-4 flex h-[530px] flex-col rounded-2xl border-2 border-ink-950 bg-paper-50 shadow-tactile">
+        <div className="lg:col-span-4 flex h-[520px] flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] shadow-sm overflow-hidden">
           {/* Tab Switcher */}
-          <div className="grid grid-cols-3 border-b-2 border-ink-950 bg-paper-200 p-1 rounded-t-xl">
+          <div className="grid grid-cols-3 border-b border-[var(--border)] bg-[var(--bg-page)] p-1">
             <button
               type="button"
               onClick={() => setActiveTab('chat')}
-              className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-bold transition ${
-                activeTab === 'chat' ? 'bg-ink-950 text-paper-50 shadow-tactile-sm' : 'text-ink-700'
+              className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium transition ${
+                activeTab === 'chat'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <MessageSquare className="h-3 w-3" />
+              <MessageSquare className="h-3.5 w-3.5" />
               <span>Chat</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('notes')}
-              className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-bold transition ${
-                activeTab === 'notes' ? 'bg-ink-950 text-paper-50 shadow-tactile-sm' : 'text-ink-700'
+              className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium transition ${
+                activeTab === 'notes'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <FileText className="h-3 w-3" />
-              <span>Notes/Tasks</span>
+              <FileText className="h-3.5 w-3.5" />
+              <span>Notes</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('participants')}
-              className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-bold transition ${
-                activeTab === 'participants' ? 'bg-ink-950 text-paper-50 shadow-tactile-sm' : 'text-ink-700'
+              className={`flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium transition ${
+                activeTab === 'participants'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Users className="h-3 w-3" />
+              <Users className="h-3.5 w-3.5" />
               <span>Peers ({Math.max(1, peers.length)})</span>
             </button>
           </div>
@@ -583,31 +619,31 @@ export default function MeetingRoomPage() {
             <>
               <div className="flex-1 space-y-2 overflow-y-auto p-3.5">
                 {messages.length === 0 ? (
-                  <p className="py-12 text-center font-mono text-xs text-ink-500">
-                    No messages sent yet. Say hello!
+                  <p className="py-12 text-center text-xs text-[var(--text-secondary)]">
+                    No messages sent yet. Send a note to participants!
                   </p>
                 ) : (
                   messages.map((m) => (
-                    <div key={m.id} className="rounded-lg border border-ink-900/10 bg-paper-100 p-2.5">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="font-bold text-coral">{m.senderName}</span>
-                        <span className="text-ink-400">
+                    <div key={m.id} className="rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-2.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-[var(--accent)]">{m.senderName}</span>
+                        <span className="text-[var(--text-secondary)] font-mono">
                           {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-ink-950 font-sans">{m.content}</p>
+                      <p className="mt-1 text-xs text-[var(--text-primary)]">{m.content}</p>
                     </div>
                   ))
                 )}
               </div>
 
               {peers.some((p) => p.peerId !== peerId && p.typing) && (
-                <p className="px-3 pb-1 font-mono text-[10px] text-ink-500 italic">
-                  Peer is typing...
+                <p className="px-3 pb-1 text-[11px] text-[var(--text-secondary)] italic">
+                  Someone is typing...
                 </p>
               )}
 
-              <form onSubmit={handleSendMessage} className="flex gap-2 border-t-2 border-ink-950 p-3">
+              <form onSubmit={handleSendMessage} className="flex gap-2 border-t border-[var(--border)] p-3">
                 <input
                   type="text"
                   value={chatInput}
@@ -616,12 +652,12 @@ export default function MeetingRoomPage() {
                     setTyping(e.target.value.length > 0);
                   }}
                   placeholder="Send in-room chat..."
-                  className="flex-1 rounded-lg border border-ink-900/25 bg-paper-50 px-3 py-1.5 text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
+                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] px-3 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]"
                 />
                 <button
                   type="submit"
                   aria-label="Send message"
-                  className="rounded-lg border border-ink-950 bg-ink-950 px-3 py-1.5 text-paper-50 shadow-tactile-sm"
+                  className="rounded-lg bg-[var(--text-primary)] px-3 py-1.5 text-[var(--bg-page)] hover:opacity-90"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>
@@ -633,20 +669,20 @@ export default function MeetingRoomPage() {
           {activeTab === 'notes' && (
             <div className="flex flex-1 flex-col gap-3 p-3.5">
               <div className="flex-1 flex flex-col">
-                <label className="font-mono text-[10px] font-bold uppercase text-ink-600 mb-1">
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Shared Session Notes
                 </label>
                 <textarea
                   value={sharedNotes}
                   onChange={(e) => setSharedNotes(e.target.value)}
-                  placeholder="Notes typed here are saved when you leave..."
-                  className="flex-1 rounded-xl border border-ink-900/25 bg-paper-100 p-2.5 font-mono text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
+                  placeholder="Notes typed here are preserved when you exit..."
+                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-2.5 text-xs text-[var(--text-primary)] focus:outline-none"
                 />
               </div>
 
-              <div className="border-t border-ink-900/10 pt-2">
-                <label className="font-mono text-[10px] font-bold uppercase text-ink-600 mb-1 block">
-                  Quick Kanban Action Item
+              <div className="border-t border-[var(--border)] pt-2.5">
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">
+                  Quick Action Item to Workspace
                 </label>
                 <form onSubmit={handleCreateQuickTask} className="flex gap-2">
                   <input
@@ -654,11 +690,11 @@ export default function MeetingRoomPage() {
                     value={quickTaskTitle}
                     onChange={(e) => setQuickTaskTitle(e.target.value)}
                     placeholder="e.g. Update API schema..."
-                    className="flex-1 rounded-lg border border-ink-900/25 bg-paper-50 px-2.5 py-1.5 text-xs text-ink-950 focus:outline-none"
+                    className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none"
                   />
                   <button
                     type="submit"
-                    className="flex items-center gap-1 rounded-lg border border-ink-950 bg-emeraldBrand px-3 py-1.5 text-xs font-bold text-paper-50 shadow-tactile-sm"
+                    className="flex items-center gap-1 rounded-lg bg-[var(--text-primary)] px-3 py-1.5 text-xs font-medium text-[var(--bg-page)] hover:opacity-90"
                   >
                     <Plus className="h-3 w-3" />
                     <span>File</span>
@@ -677,16 +713,16 @@ export default function MeetingRoomPage() {
               ).map((p) => (
                 <div
                   key={p.peerId}
-                  className="flex items-center justify-between rounded-lg border border-ink-900/15 bg-paper-100 px-3 py-2 text-xs font-bold text-ink-950"
+                  className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-page)] px-3 py-2 text-xs font-medium text-[var(--text-primary)]"
                 >
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emeraldBrand" />
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
                     <span>{p.name}</span>
-                    {p.peerId === peerId && <span className="font-mono text-[10px] text-coral">(You)</span>}
+                    {p.peerId === peerId && <span className="text-[11px] text-[var(--accent)] font-mono">(You)</span>}
                   </span>
                   <div className="flex items-center gap-2">
-                    {p.muted ? <MicOff className="h-3.5 w-3.5 text-coral" /> : <Mic className="h-3.5 w-3.5 text-emeraldBrand" />}
-                    {p.cameraOff ? <VideoOff className="h-3.5 w-3.5 text-coral" /> : <Video className="h-3.5 w-3.5 text-emeraldBrand" />}
+                    {p.muted ? <MicOff className="h-3.5 w-3.5 text-[var(--accent)]" /> : <Mic className="h-3.5 w-3.5 text-[var(--success)]" />}
+                    {p.cameraOff ? <VideoOff className="h-3.5 w-3.5 text-[var(--accent)]" /> : <Video className="h-3.5 w-3.5 text-[var(--success)]" />}
                   </div>
                 </div>
               ))}

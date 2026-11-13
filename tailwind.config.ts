@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,55 +10,45 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        ink: {
-          950: "#0A0B0D",
-          900: "#111216",
-          800: "#1C1E24",
-          700: "#2B2E37",
-          600: "#4B505F",
-          500: "#707688",
-          400: "#9DA3B4",
-          300: "#D1D5DF",
-          200: "#E6E8EE",
-          100: "#F2F3F6",
-          50: "#FAFBFD",
+        background: "var(--bg-page)",
+        foreground: "var(--text-primary)",
+        page: "var(--bg-page)",
+        surface: "var(--bg-surface)",
+        "surface-elevated": "var(--bg-surface-elevated)",
+        subtle: "var(--bg-subtle)",
+        "text-primary": "var(--text-primary)",
+        "text-secondary": "var(--text-secondary)",
+        "text-muted": "var(--text-muted)",
+        "border-subtle": "var(--border)",
+        accent: {
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
+          subtle: "var(--accent-subtle)",
+          text: "var(--accent-text)",
         },
-        paper: {
-          50: "#FCFCF9",
-          100: "#F7F6F1",
-          200: "#EFECE4",
-          300: "#E3DFD4",
+        success: {
+          DEFAULT: "var(--success)",
+          subtle: "var(--success-subtle)",
+          text: "var(--success-text)",
         },
-        coral: {
-          DEFAULT: "#FF4D2D",
-          hover: "#E83A1A",
-          subtle: "#FFF1EE",
-          dark: "#B8240A",
-        },
-        emeraldBrand: {
-          DEFAULT: "#059669",
-          dark: "#047857",
-          subtle: "#ECFDF5",
-        },
-        amberBrand: {
-          DEFAULT: "#D97706",
-          subtle: "#FFFBEB",
+        warning: {
+          DEFAULT: "var(--warning)",
+          subtle: "var(--warning-subtle)",
+          text: "var(--warning-text)",
         },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
+        sans: ["var(--font-geist-sans)", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
       },
       boxShadow: {
-        tactile: "2px 2px 0px 0px rgba(17, 18, 22, 1)",
-        "tactile-lg": "4px 4px 0px 0px rgba(17, 18, 22, 1)",
-        "tactile-sm": "1px 1px 0px 0px rgba(17, 18, 22, 1)",
-        "tactile-coral": "3px 3px 0px 0px #FF4D2D",
+        subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.04)",
+        card: "0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03)",
+        dropdown: "0 6px 18px -2px rgba(0, 0, 0, 0.08), 0 3px 6px -2px rgba(0, 0, 0, 0.04)",
       },
     },
   },
   plugins: [],
 };
+
 export default config;
