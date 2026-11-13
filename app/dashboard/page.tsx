@@ -9,10 +9,15 @@ import {
   Search,
   Sparkles,
   Trash2,
-  Calendar,
   CheckSquare,
   MessageSquare,
+  Copy,
+  Check,
+  Radio,
+  Clock,
+  Layers,
 } from 'lucide-react';
+import { useToast } from '@/app/components/Toast';
 
 interface Meeting {
   id: string;
@@ -33,6 +38,8 @@ interface Workspace {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { showToast } = useToast();
+
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [title, setTitle] = useState('');
@@ -43,6 +50,7 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchMeetings = useCallback(async () => {
     setFetching(true);
@@ -56,12 +64,12 @@ export default function DashboardPage() {
       if (data.meetings) {
         setMeetings(data.meetings);
       }
-    } catch (error) {
-      console.error('Error fetching meetings:', error);
+    } catch {
+      showToast('Error loading meetings', 'error');
     } finally {
       setFetching(false);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, showToast]);
 
   useEffect(() => {
     fetchMeetings();
@@ -86,8 +94,8 @@ export default function DashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
-          description: description || null,
+          title: title.trim(),
+          description: description.trim() || null,
           workspaceId: workspaceId || null,
           scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         }),
@@ -97,10 +105,13 @@ export default function DashboardPage() {
         setTitle('');
         setDescription('');
         setScheduledAt('');
+        showToast('Meeting scheduled successfully', 'success');
         fetchMeetings();
+      } else {
+        showToast('Failed to schedule meeting', 'error');
       }
-    } catch (error) {
-      console.error('Error creating meeting:', error);
+    } catch {
+      showToast('Network error while creating meeting', 'error');
     } finally {
       setLoading(false);
     }
@@ -113,119 +124,183 @@ export default function DashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `Instant Sync (${new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })})`,
-          description: 'Instant WebRTC video & AI collaboration room',
+          title: `Live Sync • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          description: 'Instant P2P WebRTC video & collaboration room',
           status: 'LIVE',
           workspaceId: workspaces[0]?.id || null,
         }),
       });
       const data = await res.json();
       if (res.ok && data.meeting?.id) {
+        showToast('Live room created! Entering...', 'success');
         router.push(`/meetings/${data.meeting.id}/room`);
+      } else {
+        showToast('Failed to create instant room', 'error');
       }
-    } catch (error) {
-      console.error('Error starting instant meeting:', error);
+    } catch {
+      showToast('Network error starting room', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleCopyLink = (meetingId: string) => {
+    const link = `${window.location.origin}/meetings/${meetingId}/room`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(meetingId);
+    showToast('Meeting room link copied to clipboard', 'info');
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const handleUpdateStatus = async (meetingId: string, currentStatus: string) => {
+    const nextStatusMap: Record<string, string> = {
+      SCHEDULED: 'LIVE',
+      LIVE: 'ENDED',
+      ENDED: 'SCHEDULED',
+    };
+    const nextStatus = nextStatusMap[currentStatus] || 'SCHEDULED';
+
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        setMeetings((prev) =>
+          prev.map((m) => (m.id === meetingId ? { ...m, status: nextStatus } : m))
+        );
+        showToast(`Meeting status marked as ${nextStatus}`, 'success');
+      }
+    } catch {
+      showToast('Could not update status', 'error');
+    }
+  };
+
+  const handleDelete = async (id: string, meetingTitle: string) => {
+    if (!window.confirm(`Delete meeting "${meetingTitle}"? This action cannot be undone.`)) {
+      return;
+    }
     try {
       const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMeetings((prev) => prev.filter((m) => m.id !== id));
+        showToast('Meeting deleted', 'info');
+      } else {
+        showToast('Failed to delete meeting', 'error');
       }
-    } catch (error) {
-      console.error('Delete failed:', error);
+    } catch {
+      showToast('Delete request failed', 'error');
     }
   };
 
-  const liveCount = meetings.filter((m) => m.status === 'LIVE').length;
+  const handlePrefillSample = () => {
+    setTitle('Quarterly Product & Scalability Review');
+    setDescription(
+      'Review WebRTC mesh latency benchmarks, automated Kanban action item filing, and Neon DB query optimization.'
+    );
+    showToast('Sample details populated', 'info');
+  };
+
+  const liveRooms = meetings.filter((m) => m.status === 'LIVE');
   const summarizedCount = meetings.filter((m) => Boolean(m.summary)).length;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      {/* Top Banner & Fast Action Bar */}
+      <div className="flex flex-col gap-4 border-b-2 border-ink-950 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900">
-            Meetings Hub
+          <div className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider text-coral">
+            <Radio className="h-3.5 w-3.5 text-coral animate-pulse" />
+            <span>Control Center</span>
+          </div>
+          <h1 className="mt-1 font-sans text-3xl font-extrabold text-ink-950 sm:text-4xl">
+            Meetings &amp; Video Rooms
           </h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Schedule sessions, launch live WebRTC rooms, or review AI summaries.
+          <p className="mt-1 text-xs text-ink-600 max-w-xl">
+            Launch instant WebRTC rooms, schedule team sessions, and review post-call AI summaries.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleInstantMeeting}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 disabled:opacity-50 transition"
-        >
-          <Video className="h-4 w-4" aria-hidden="true" />
-          Start Instant Meeting
-        </button>
-      </div>
 
-      {/* Quick Summary Strip */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-stone-500">Total Meetings</p>
-          <p className="mt-1 text-2xl font-bold text-stone-900">{meetings.length}</p>
-        </div>
-        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-stone-500">Live Rooms Now</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-700">{liveCount}</p>
-        </div>
-        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-stone-500">AI Summarized</p>
-          <p className="mt-1 text-2xl font-bold text-amber-700">{summarizedCount}</p>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleInstantMeeting}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl border-2 border-ink-950 bg-coral px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-coral-hover active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
+          >
+            <Video className="h-4 w-4" aria-hidden="true" />
+            <span>Start Instant Room</span>
+          </button>
         </div>
       </div>
 
-      {/* Create / Schedule Meeting Form */}
-      <section className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-          <Plus className="h-5 w-5 text-emerald-700" aria-hidden="true" />
-          Schedule a New Meeting
-        </h2>
+      {/* Metrics Strip */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-ink-900/15 bg-paper-50 p-4 shadow-tactile-sm">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-ink-500">Total Archive</p>
+          <p className="mt-1 font-sans text-2xl font-extrabold text-ink-950">{meetings.length}</p>
+        </div>
+        <div className="rounded-xl border border-ink-900/15 bg-paper-50 p-4 shadow-tactile-sm">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-ink-500">Live Active Rooms</p>
+          <p className="mt-1 font-sans text-2xl font-extrabold text-coral">{liveRooms.length}</p>
+        </div>
+        <div className="rounded-xl border border-ink-900/15 bg-paper-50 p-4 shadow-tactile-sm">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-ink-500">AI Summarized</p>
+          <p className="mt-1 font-sans text-2xl font-extrabold text-emeraldBrand">{summarizedCount}</p>
+        </div>
+        <div className="rounded-xl border border-ink-900/15 bg-paper-50 p-4 shadow-tactile-sm">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-ink-500">Active Workspaces</p>
+          <p className="mt-1 font-sans text-2xl font-extrabold text-ink-950">{workspaces.length}</p>
+        </div>
+      </div>
+
+      {/* Schedule Meeting Accordion / Box */}
+      <section className="mt-6 rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 sm:p-6 shadow-tactile">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/10 pb-4">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4 text-coral" />
+            <h2 className="font-sans text-sm font-extrabold uppercase tracking-wide text-ink-950">
+              Schedule or Provision New Meeting
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={handlePrefillSample}
+            className="rounded border border-ink-900/20 bg-paper-200 px-2.5 py-1 font-mono text-[11px] font-bold text-ink-700 hover:border-ink-950 hover:text-ink-950 transition"
+          >
+            Prefill Sample Details
+          </button>
+        </div>
+
         <form onSubmit={handleCreateMeeting} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label
-              htmlFor="meeting-title"
-              className="block text-xs font-medium text-stone-600 mb-1"
-            >
-              Meeting Title *
+            <label htmlFor="meeting-title" className="block font-mono text-[11px] font-bold uppercase text-ink-700 mb-1">
+              Title *
             </label>
             <input
               id="meeting-title"
               type="text"
-              className="w-full rounded-xl border border-stone-300 bg-white p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Q4 Architecture Review"
+              placeholder="e.g. Sprint Architecture Sync"
               required
+              className="w-full rounded-lg border border-ink-900/25 bg-paper-50 p-2.5 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label
-                htmlFor="meeting-ws"
-                className="block text-xs font-medium text-stone-600 mb-1"
-              >
+              <label htmlFor="meeting-ws" className="block font-mono text-[11px] font-bold uppercase text-ink-700 mb-1">
                 Workspace
               </label>
               <select
                 id="meeting-ws"
                 value={workspaceId}
                 onChange={(e) => setWorkspaceId(e.target.value)}
-                className="w-full rounded-xl border border-stone-300 bg-white p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+                className="w-full rounded-lg border border-ink-900/25 bg-paper-50 p-2.5 text-xs font-medium text-ink-950 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
               >
-                <option value="">Personal / General</option>
+                <option value="">Personal / Independent</option>
                 {workspaces.map((ws) => (
                   <option key={ws.id} value={ws.id}>
                     {ws.name}
@@ -234,80 +309,78 @@ export default function DashboardPage() {
               </select>
             </div>
             <div>
-              <label
-                htmlFor="meeting-date"
-                className="block text-xs font-medium text-stone-600 mb-1"
-              >
-                Date &amp; Time
+              <label htmlFor="meeting-date" className="block font-mono text-[11px] font-bold uppercase text-ink-700 mb-1">
+                Scheduled Time
               </label>
               <input
                 id="meeting-date"
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
-                className="w-full rounded-xl border border-stone-300 bg-white p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+                className="w-full rounded-lg border border-ink-900/25 bg-paper-50 p-2 text-xs font-medium text-ink-950 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
               />
             </div>
           </div>
 
           <div className="sm:col-span-2">
-            <label
-              htmlFor="meeting-desc"
-              className="block text-xs font-medium text-stone-600 mb-1"
-            >
-              Agenda / Description
+            <label htmlFor="meeting-desc" className="block font-mono text-[11px] font-bold uppercase text-ink-700 mb-1">
+              Description / Agenda Notes
             </label>
             <textarea
               id="meeting-desc"
               rows={2}
-              className="w-full rounded-xl border border-stone-300 bg-white p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Key topics, goals, or participants..."
+              placeholder="Key discussion topics, expected attendees, or milestones..."
+              className="w-full rounded-lg border border-ink-900/25 bg-paper-50 p-2.5 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 flex justify-end">
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-stone-800 disabled:opacity-50 transition"
+              className="flex items-center gap-2 rounded-lg border-2 border-ink-950 bg-ink-950 px-5 py-2 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-ink-800 disabled:opacity-50 active:translate-x-0.5 active:translate-y-0.5"
             >
-              {loading ? 'Creating...' : 'Create Meeting'}
+              <Plus className="h-3.5 w-3.5" />
+              <span>{loading ? 'Creating...' : 'Create Meeting'}</span>
             </button>
           </div>
         </form>
       </section>
 
-      {/* Search & Filter */}
-      <section className="mt-8">
+      {/* Meeting Archive & Search */}
+      <section className="mt-10">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-semibold text-stone-900">
-            Meeting History &amp; Rooms
-          </h2>
-          <div className="flex flex-wrap gap-2">
+          <div>
+            <h2 className="font-sans text-xl font-extrabold text-ink-950">
+              Meetings Archive ({meetings.length})
+            </h2>
+            <p className="text-xs text-ink-500">
+              Filter by status or search title and description
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search
-                className="absolute left-3 top-2.5 h-4 w-4 text-stone-400"
-                aria-hidden="true"
-              />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-ink-400" />
               <input
                 type="search"
                 aria-label="Search meetings"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search meetings..."
-                className="rounded-xl border border-stone-300 bg-white py-2 pl-9 pr-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+                className="rounded-lg border border-ink-900/20 bg-paper-50 py-1.5 pl-8 pr-3 text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
               />
             </div>
             <select
-              aria-label="Filter by meeting status"
+              aria-label="Filter status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+              className="rounded-lg border border-ink-900/20 bg-paper-50 px-3 py-1.5 text-xs font-semibold text-ink-950 focus:border-ink-950 focus:outline-none"
             >
               <option value="ALL">All Statuses</option>
-              <option value="LIVE">Live</option>
+              <option value="LIVE">Live Rooms</option>
               <option value="SCHEDULED">Scheduled</option>
               <option value="ENDED">Ended</option>
             </select>
@@ -316,92 +389,120 @@ export default function DashboardPage() {
 
         <div className="mt-4 space-y-3">
           {fetching ? (
-            <p className="py-8 text-center text-sm text-stone-500">
-              Loading meetings...
-            </p>
+            <div className="rounded-xl border border-ink-900/10 bg-paper-50 p-8 text-center text-xs font-mono text-ink-500">
+              Fetching meeting records...
+            </div>
           ) : meetings.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-stone-500">
-              No meetings found. Schedule one above or start an instant meeting!
+            <div className="rounded-xl border-2 border-dashed border-ink-900/20 bg-paper-50 p-8 text-center">
+              <p className="font-sans text-sm font-bold text-ink-950">No meetings match your filter</p>
+              <p className="mt-1 text-xs text-ink-600">
+                Create a new meeting above or launch an instant room to get started.
+              </p>
             </div>
           ) : (
             meetings.map((meeting) => (
               <div
                 key={meeting.id}
-                className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm hover:border-emerald-300 transition sm:flex-row sm:items-center sm:justify-between"
+                className="group flex flex-col gap-4 rounded-xl border-2 border-ink-950 bg-paper-50 p-4 shadow-tactile transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-w-xl">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ${
+                    <button
+                      type="button"
+                      title="Click to toggle meeting status"
+                      onClick={() => handleUpdateStatus(meeting.id, meeting.status)}
+                      className={`rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider transition ${
                         meeting.status === 'LIVE'
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          ? 'bg-coral text-paper-50'
                           : meeting.status === 'ENDED'
-                            ? 'bg-stone-100 text-stone-600'
-                            : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          ? 'bg-paper-200 text-ink-600'
+                          : 'bg-emeraldBrand text-paper-50'
                       }`}
                     >
-                      {meeting.status}
-                    </span>
+                      {meeting.status} ↻
+                    </button>
+
                     {meeting.workspace && (
-                      <span className="rounded-md bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                      <span className="flex items-center gap-1 rounded bg-paper-200/80 px-2 py-0.5 font-mono text-[10px] text-ink-700">
+                        <Layers className="h-3 w-3 text-ink-500" />
                         {meeting.workspace.name}
                       </span>
                     )}
+
                     {meeting.summary && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
-                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                      <span className="flex items-center gap-1 font-mono text-[10px] font-bold text-emeraldBrand">
+                        <Sparkles className="h-3 w-3" />
                         AI Summarized
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-lg font-semibold text-stone-900">
+                  <h3 className="font-sans text-base font-extrabold text-ink-950">
                     {meeting.title}
                   </h3>
-                  <p className="text-sm text-stone-600">
-                    {meeting.description || 'No agenda provided'}
+                  <p className="text-xs text-ink-600 leading-relaxed">
+                    {meeting.description || 'No description entered.'}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-stone-500">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-                      {new Date(
-                        meeting.scheduledAt || meeting.createdAt
-                      ).toLocaleString()}
+                  <div className="flex flex-wrap items-center gap-3 pt-1 font-mono text-[11px] text-ink-500">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-ink-400" />
+                      {new Date(meeting.scheduledAt || meeting.createdAt).toLocaleString()}
                     </span>
-                    <span className="inline-flex items-center gap-1">
-                      <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
-                      {meeting._count?.tasks ?? 0} action items
+                    <span className="flex items-center gap-1">
+                      <CheckSquare className="h-3 w-3 text-ink-400" />
+                      {meeting._count?.tasks ?? 0} tasks
                     </span>
-                    <span className="inline-flex items-center gap-1">
-                      <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-                      {meeting._count?.messages ?? 0} messages
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3 text-ink-400" />
+                      {meeting._count?.messages ?? 0} chats
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/meetings/${meeting.id}/room`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-800 transition"
-                  >
-                    <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                    Join Room
-                  </Link>
-                  <Link
-                    href={`/meetings/${meeting.id}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-800 hover:bg-stone-50 transition"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
-                    Summary &amp; Notes
-                  </Link>
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                   <button
                     type="button"
-                    aria-label={`Delete ${meeting.title}`}
-                    onClick={() => handleDelete(meeting.id)}
-                    className="rounded-xl border border-stone-200 p-2 text-stone-400 hover:border-rose-300 hover:text-rose-600 transition"
+                    onClick={() => handleCopyLink(meeting.id)}
+                    className="flex items-center gap-1 rounded-lg border border-ink-900/20 bg-paper-100 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-ink-700 hover:border-ink-950 hover:text-ink-950 transition"
                   >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    {copiedId === meeting.id ? (
+                      <>
+                        <Check className="h-3 w-3 text-emeraldBrand" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        <span>Link</span>
+                      </>
+                    )}
+                  </button>
+
+                  <Link
+                    href={`/meetings/${meeting.id}/room`}
+                    className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-ink-950 px-3 py-1.5 text-xs font-bold text-paper-50 shadow-tactile-sm transition hover:bg-ink-800"
+                  >
+                    <Video className="h-3.5 w-3.5 text-coral" />
+                    <span>Join Room</span>
+                  </Link>
+
+                  <Link
+                    href={`/meetings/${meeting.id}`}
+                    className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-paper-50 px-3 py-1.5 text-xs font-bold text-ink-950 shadow-tactile-sm transition hover:bg-paper-200"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-emeraldBrand" />
+                    <span>AI Notes</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    aria-label={`Delete meeting ${meeting.title}`}
+                    onClick={() => handleDelete(meeting.id, meeting.title)}
+                    className="rounded-lg border border-ink-900/20 p-1.5 text-ink-400 hover:border-coral hover:text-coral transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>

@@ -15,7 +15,13 @@ import {
   Clock,
   ArrowLeft,
   Save,
+  Plus,
+  Trash2,
+  Edit2,
+  Check,
+  FileText,
 } from 'lucide-react';
+import { useToast } from '@/app/components/Toast';
 
 interface Task {
   id: string;
@@ -54,6 +60,7 @@ interface SpeechRecognitionLike {
 export default function MeetingDetailPage() {
   const params = useParams();
   const meetingId = params?.id as string;
+  const { showToast } = useToast();
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [transcriptInput, setTranscriptInput] = useState('');
@@ -63,7 +70,17 @@ export default function MeetingDetailPage() {
   const [summarizing, setSummarizing] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [dictating, setDictating] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('');
+
+  // Edit meeting metadata state
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
+  // Add task state
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskAssignee, setNewTaskAssignee] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM');
+
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const fetchMeeting = useCallback(async () => {
@@ -73,16 +90,18 @@ export default function MeetingDetailPage() {
       const data = await res.json();
       if (res.ok && data.meeting) {
         setMeeting(data.meeting);
+        setEditTitle(data.meeting.title);
+        setEditDescription(data.meeting.description || '');
         setTranscriptInput(data.meeting.transcript || '');
         setSharedNotes(data.meeting.sharedNotes || '');
         setTasks(data.meeting.tasks || []);
       }
-    } catch (err) {
-      console.error('Error fetching meeting detail:', err);
+    } catch {
+      showToast('Error loading meeting details', 'error');
     } finally {
       setLoading(false);
     }
-  }, [meetingId]);
+  }, [meetingId, showToast]);
 
   useEffect(() => {
     if (meetingId) fetchMeeting();
@@ -92,6 +111,7 @@ export default function MeetingDetailPage() {
     if (dictating && recognitionRef.current) {
       recognitionRef.current.stop();
       setDictating(false);
+      showToast('Live dictation paused', 'info');
       return;
     }
 
@@ -102,9 +122,7 @@ export default function MeetingDetailPage() {
     const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRec) {
-      setStatusMsg(
-        'Live speech recognition is supported in Chrome/Edge. You can still paste or type transcript text.'
-      );
+      showToast('Speech Recognition requires Chrome or Edge browser.', 'error');
       return;
     }
 
@@ -124,20 +142,20 @@ export default function MeetingDetailPage() {
     recognition.start();
     recognitionRef.current = recognition;
     setDictating(true);
+    showToast('Listening... Speak into your microphone', 'success');
   };
 
   const handleSummarize = async () => {
     if (!transcriptInput.trim()) {
-      setStatusMsg('Please enter or dictate a transcript first.');
+      showToast('Please type, paste, or dictate a transcript first.', 'error');
       return;
     }
     setSummarizing(true);
-    setStatusMsg('');
     try {
       const res = await fetch(`/api/meetings/${meetingId}/summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: transcriptInput }),
+        body: JSON.stringify({ transcript: transcriptInput.trim() }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -149,14 +167,15 @@ export default function MeetingDetailPage() {
         if (Array.isArray(data.actionItems)) {
           setTasks((prev) => [...data.actionItems, ...prev]);
         }
-        setStatusMsg(
-          `AI Summary generated (${data.source === 'openai' ? 'OpenAI GPT-4o-mini' : 'Smart NLP Engine'}) and ${data.actionItems?.length || 0} action item(s) added to Kanban!`
+        showToast(
+          `AI summary complete! Extracted ${data.actionItems?.length || 0} action items into Kanban.`,
+          'success'
         );
       } else {
-        setStatusMsg(data.error || 'Summarization failed');
+        showToast(data.error || 'Summarization failed', 'error');
       }
     } catch {
-      setStatusMsg('Failed to reach summarization API.');
+      showToast('Network error during summarization', 'error');
     } finally {
       setSummarizing(false);
     }
@@ -170,9 +189,65 @@ export default function MeetingDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sharedNotes }),
       });
-      if (res.ok) setStatusMsg('Shared notes saved.');
+      if (res.ok) {
+        showToast('Shared notes saved', 'success');
+      } else {
+        showToast('Failed to save notes', 'error');
+      }
+    } catch {
+      showToast('Network error saving notes', 'error');
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!editTitle.trim()) return;
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+        }),
+      });
+      if (res.ok) {
+        setMeeting((prev) =>
+          prev ? { ...prev, title: editTitle.trim(), description: editDescription.trim() || null } : null
+        );
+        setEditingMeta(false);
+        showToast('Meeting updated', 'success');
+      }
+    } catch {
+      showToast('Update failed', 'error');
+    }
+  };
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim()) return;
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTaskTitle.trim(),
+          assigneeName: newTaskAssignee.trim() || 'Unassigned',
+          priority: newTaskPriority,
+          meetingId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.task) {
+        setTasks((prev) => [data.task, ...prev]);
+        setNewTaskTitle('');
+        setNewTaskAssignee('');
+        showToast('Action item added', 'success');
+      }
+    } catch {
+      showToast('Failed to create task', 'error');
     }
   };
 
@@ -189,26 +264,33 @@ export default function MeetingDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
+    showToast(`Task moved to ${status}`, 'info');
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+    showToast('Task removed', 'info');
   };
 
   const handleExportMarkdown = () => {
     if (!meeting) return;
     const md = [
       `# ${meeting.title}`,
-      meeting.description ? `\n${meeting.description}\n` : '',
-      `## AI Summary\n${meeting.summary || 'Not generated yet.'}`,
-      `\n## Action Items\n${
+      meeting.description ? `\n> ${meeting.description}\n` : '',
+      `## AI Executive Summary\n${meeting.summary || 'No summary generated.'}`,
+      `\n## Extracted Action Items (${tasks.length})\n${
         tasks.length > 0
           ? tasks
               .map(
                 (t) =>
-                  `- [${t.status === 'DONE' ? 'x' : ' '}] **${t.title}** (${t.priority}) — ${t.assigneeName || 'Unassigned'}`
+                  `- [${t.status === 'DONE' ? 'x' : ' '}] **${t.title}** (${t.priority}) — Owner: ${t.assigneeName || 'Unassigned'}`
               )
               .join('\n')
           : '- None'
       }`,
       `\n## Shared Notes\n${sharedNotes || 'None'}`,
-      `\n## Transcript\n${transcriptInput || 'None'}`,
+      `\n## Full Transcript\n${transcriptInput || 'None'}`,
     ].join('\n');
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -218,231 +300,386 @@ export default function MeetingDetailPage() {
     a.download = `${meeting.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-notes.md`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast('Markdown document exported', 'success');
+  };
+
+  const handlePrefillTranscript = (type: 'sprint' | 'client') => {
+    if (type === 'sprint') {
+      setTranscriptInput(
+        'Dev Lead: The WebRTC video room has low latency (< 35ms) tested locally. UX Designer: I added the high-contrast tactile theme and keyboard navigation hints. Product Owner: Please verify live speech transcription in browser and auto-file action items.'
+      );
+    } else {
+      setTranscriptInput(
+        'Client Director: We need the security report demonstrating OWASP Top 10 mitigation and rate-limiting on authentication routes. Engineering Lead: NextAuth handles JWT session tokens with bcrypt encryption, and API routes have sliding window rate limits. QA Lead: I will export the audit report before final submission.'
+      );
+    }
+    showToast('Sample transcript pasted', 'info');
   };
 
   if (loading) {
     return (
-      <div className="p-8 text-center text-stone-500">
-        Loading meeting intelligence...
+      <div className="mx-auto max-w-6xl p-12 text-center font-mono text-xs text-ink-500">
+        Loading meeting workspace...
       </div>
     );
   }
   if (!meeting) {
     return (
-      <div className="p-8 text-center text-stone-600">
-        Meeting not found.{' '}
-        <Link href="/dashboard" className="text-emerald-700 underline">
-          Back to Meetings Hub
+      <div className="mx-auto max-w-md p-12 text-center">
+        <p className="font-sans text-base font-bold text-ink-950">Meeting not found</p>
+        <Link
+          href="/dashboard"
+          className="mt-3 inline-block rounded-lg border-2 border-ink-950 bg-ink-950 px-4 py-2 text-xs font-bold text-paper-50 shadow-tactile"
+        >
+          Return to Dashboard
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-900"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-        Back to Meetings Hub
-      </Link>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      {/* Top Breadcrumb & Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-ink-950 pb-4">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-1.5 font-mono text-xs font-bold text-ink-700 hover:text-ink-950 transition"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>BACK TO MEETINGS</span>
+        </Link>
 
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-stone-900">{meeting.title}</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            {meeting.description ||
-              'Post-meeting intelligence, transcript, and action items'}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/meetings/${meeting.id}/room`}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 transition"
+            className="flex items-center gap-1.5 rounded-lg border-2 border-ink-950 bg-coral px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-coral-hover active:translate-x-0.5 active:translate-y-0.5"
           >
-            <Video className="h-4 w-4" aria-hidden="true" />
-            Join Live Room
+            <Video className="h-3.5 w-3.5" />
+            <span>Launch Live Room</span>
           </Link>
           <button
             type="button"
             onClick={handleExportMarkdown}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 transition"
+            className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-paper-50 px-3 py-1.5 text-xs font-bold text-ink-950 shadow-tactile-sm transition hover:bg-paper-200"
           >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Export .MD
+            <Download className="h-3.5 w-3.5" />
+            <span>Export .MD</span>
           </button>
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 transition"
+            className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-paper-50 px-3 py-1.5 text-xs font-bold text-ink-950 shadow-tactile-sm transition hover:bg-paper-200"
           >
-            <Printer className="h-4 w-4" aria-hidden="true" />
-            Print / PDF
+            <Printer className="h-3.5 w-3.5" />
+            <span>Print PDF</span>
           </button>
         </div>
       </div>
 
-      {statusMsg && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-900">
-          {statusMsg}
-        </div>
-      )}
-
-      {/* Transcript + AI Summary */}
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-stone-900">
-              Meeting Transcript
-            </h2>
+      {/* Meeting Title Banner */}
+      <div className="mt-4 rounded-xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
+        {editingMeta ? (
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded border border-ink-950 bg-paper-100 p-2 font-sans text-lg font-bold text-ink-950 focus:outline-none"
+              placeholder="Meeting title"
+            />
+            <textarea
+              rows={2}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              className="w-full rounded border border-ink-950 bg-paper-100 p-2 text-xs text-ink-800 focus:outline-none"
+              placeholder="Meeting agenda / description"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSaveMetadata}
+                className="flex items-center gap-1 rounded bg-ink-950 px-3 py-1 text-xs font-bold text-paper-50"
+              >
+                <Check className="h-3 w-3" /> Save Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingMeta(false)}
+                className="rounded border border-ink-950 px-3 py-1 text-xs font-bold text-ink-800"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-ink-950 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-paper-50">
+                  {meeting.status}
+                </span>
+                <span className="font-mono text-xs text-ink-500">ID: {meeting.id}</span>
+              </div>
+              <h1 className="mt-1.5 font-sans text-2xl font-extrabold text-ink-950 sm:text-3xl">
+                {meeting.title}
+              </h1>
+              <p className="mt-1 text-xs text-ink-600 leading-relaxed">
+                {meeting.description || 'No description entered.'}
+              </p>
+            </div>
             <button
               type="button"
-              onClick={toggleDictation}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition ${
-                dictating
-                  ? 'bg-rose-600 text-white animate-pulse'
-                  : 'border border-stone-300 bg-stone-50 text-stone-700 hover:bg-stone-100'
-              }`}
+              onClick={() => setEditingMeta(true)}
+              className="flex items-center gap-1 rounded border border-ink-900/20 px-2.5 py-1 text-xs font-semibold text-ink-700 hover:border-ink-950 hover:text-ink-950 transition"
             >
-              {dictating ? (
-                <>
-                  <MicOff className="h-3.5 w-3.5" aria-hidden="true" />
-                  Stop Live Dictation
-                </>
-              ) : (
-                <>
-                  <Mic className="h-3.5 w-3.5" aria-hidden="true" />
-                  Live Speech-to-Text
-                </>
-              )}
+              <Edit2 className="h-3 w-3" />
+              <span>Edit</span>
             </button>
           </div>
-          <textarea
-            className="h-56 w-full rounded-xl border border-stone-300 bg-stone-50/50 p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
-            placeholder="Paste transcript or click 'Live Speech-to-Text' to dictate..."
-            value={transcriptInput}
-            onChange={(e) => setTranscriptInput(e.target.value)}
-          />
-          <button
-            type="button"
-            onClick={handleSummarize}
-            disabled={summarizing}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 transition"
-          >
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            {summarizing
-              ? 'Generating AI Summary & Action Items...'
-              : 'Generate AI Summary & Extract Action Items'}
-          </button>
-        </div>
-
-        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold text-stone-900">
-            AI Executive Summary
-          </h2>
-          {meeting.summary ? (
-            <div className="h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50/60 p-4 text-sm text-stone-700 leading-relaxed">
-              {meeting.summary}
-            </div>
-          ) : (
-            <div className="flex h-72 items-center justify-center rounded-xl border border-dashed border-stone-300 p-6 text-center text-sm text-stone-400">
-              No summary yet. Add a transcript and click Generate AI Summary to
-              extract key points and Kanban action items.
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Action Items & Shared Notes */}
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-stone-900">
-              Extracted Action Items ({tasks.length})
-            </h2>
-            <Link
-              href="/workspaces"
-              className="text-xs font-semibold text-emerald-700 hover:underline"
+      {/* Main Grid: Left Column (Transcript & Ingestion) + Right Column (AI Intelligence & Tasks) */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+        {/* Left Column: Transcript Ingestion */}
+        <div className="lg:col-span-6 space-y-4">
+          <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink-900/10 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-coral" />
+                <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
+                  Meeting Transcript
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={toggleDictation}
+                className={`flex items-center gap-1.5 rounded-lg border-2 px-3 py-1 text-xs font-bold uppercase tracking-wider transition ${
+                  dictating
+                    ? 'border-coral bg-coral text-paper-50 animate-pulse'
+                    : 'border-ink-950 bg-paper-100 text-ink-950 hover:bg-paper-200'
+                }`}
+              >
+                {dictating ? (
+                  <>
+                    <MicOff className="h-3.5 w-3.5" />
+                    <span>Stop Speech Ingestion</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-3.5 w-3.5 text-coral" />
+                    <span>Live Dictation</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Quick prefill helpers */}
+            <div className="mt-3 flex items-center gap-2 font-mono text-[11px] text-ink-500">
+              <span>Sample:</span>
+              <button
+                type="button"
+                onClick={() => handlePrefillTranscript('sprint')}
+                className="underline hover:text-ink-950"
+              >
+                Sprint Sync
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => handlePrefillTranscript('client')}
+                className="underline hover:text-ink-950"
+              >
+                Security Audit
+              </button>
+            </div>
+
+            <textarea
+              rows={11}
+              value={transcriptInput}
+              onChange={(e) => setTranscriptInput(e.target.value)}
+              placeholder="Paste raw conversation notes or speak directly with Live Dictation..."
+              className="mt-3 w-full rounded-xl border border-ink-900/25 bg-paper-100 p-3.5 font-mono text-xs leading-relaxed text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none"
+            />
+
+            <button
+              type="button"
+              onClick={handleSummarize}
+              disabled={summarizing}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink-950 bg-ink-950 py-3 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-ink-800 disabled:opacity-50 active:translate-x-0.5 active:translate-y-0.5"
             >
-              Open Kanban Board →
-            </Link>
+              <Sparkles className="h-4 w-4 text-coral" />
+              <span>
+                {summarizing ? 'Running Extraction...' : 'Generate AI Summary & Extract Action Items'}
+              </span>
+            </button>
           </div>
-          {tasks.length === 0 ? (
-            <p className="py-6 text-center text-sm text-stone-400">
-              Action items will appear here automatically after AI summarization.
-            </p>
-          ) : (
-            <div className="space-y-2.5">
-              {tasks.map((task) => (
-                <button
-                  key={task.id}
-                  type="button"
-                  onClick={() => cycleTaskStatus(task)}
-                  className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50/50 p-3 text-left hover:border-emerald-300 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    {task.status === 'DONE' ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    ) : task.status === 'IN_PROGRESS' ? (
-                      <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-stone-400 shrink-0" />
-                    )}
-                    <div>
-                      <p
-                        className={`text-sm font-medium ${
-                          task.status === 'DONE'
-                            ? 'line-through text-stone-400'
-                            : 'text-stone-900'
+
+          {/* Shared Notes Box */}
+          <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
+            <div className="flex items-center justify-between border-b border-ink-900/10 pb-3">
+              <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
+                Shared Collaborative Notes
+              </h2>
+              <button
+                type="button"
+                onClick={handleSaveNotes}
+                disabled={savingNotes}
+                className="flex items-center gap-1.5 rounded-lg border border-ink-950 bg-paper-100 px-3 py-1 text-xs font-bold text-ink-950 hover:bg-paper-200 transition"
+              >
+                <Save className="h-3 w-3" />
+                <span>{savingNotes ? 'Saving...' : 'Save Notes'}</span>
+              </button>
+            </div>
+            <textarea
+              rows={5}
+              value={sharedNotes}
+              onChange={(e) => setSharedNotes(e.target.value)}
+              placeholder="Meeting minutes, references, decisions taken..."
+              className="mt-3 w-full rounded-xl border border-ink-900/25 bg-paper-100 p-3 font-mono text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Right Column: AI Executive Summary + Action Items */}
+        <div className="lg:col-span-6 space-y-4">
+          {/* Executive Summary */}
+          <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
+            <div className="flex items-center justify-between border-b border-ink-900/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-emeraldBrand" />
+                <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
+                  AI Executive Summary
+                </h2>
+              </div>
+              <span className="font-mono text-[10px] text-ink-500">
+                {meeting.summary ? 'Synthesized' : 'Awaiting Input'}
+              </span>
+            </div>
+
+            {meeting.summary ? (
+              <div className="mt-3 h-56 overflow-y-auto rounded-xl border border-ink-900/15 bg-paper-100 p-4 font-sans text-xs text-ink-900 leading-relaxed whitespace-pre-wrap">
+                {meeting.summary}
+              </div>
+            ) : (
+              <div className="mt-3 flex h-56 flex-col items-center justify-center rounded-xl border-2 border-dashed border-ink-900/20 bg-paper-100/50 p-6 text-center">
+                <Sparkles className="h-6 w-6 text-ink-400 mb-2" />
+                <p className="font-sans text-xs font-bold text-ink-950">No summary generated yet</p>
+                <p className="mt-1 text-[11px] text-ink-500 max-w-xs">
+                  Paste a transcript on the left and click Generate AI Summary to synthesize key decisions.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Action Items List & Creator */}
+          <div className="rounded-2xl border-2 border-ink-950 bg-paper-50 p-5 shadow-tactile">
+            <div className="flex items-center justify-between border-b border-ink-900/10 pb-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emeraldBrand" />
+                <h2 className="font-sans text-sm font-extrabold uppercase text-ink-950">
+                  Extracted Action Items ({tasks.length})
+                </h2>
+              </div>
+              <Link
+                href="/workspaces"
+                className="font-mono text-xs font-bold text-coral underline hover:text-coral-dark"
+              >
+                Kanban View →
+              </Link>
+            </div>
+
+            {/* Inline Task Adder */}
+            <form onSubmit={handleCreateTask} className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Add action item..."
+                className="flex-1 rounded-lg border border-ink-900/25 bg-paper-50 px-3 py-1.5 text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
+              />
+              <input
+                type="text"
+                value={newTaskAssignee}
+                onChange={(e) => setNewTaskAssignee(e.target.value)}
+                placeholder="Owner"
+                className="w-24 rounded-lg border border-ink-900/25 bg-paper-50 px-2 py-1.5 text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
+              />
+              <select
+                aria-label="Priority"
+                value={newTaskPriority}
+                onChange={(e) => setNewTaskPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH')}
+                className="rounded-lg border border-ink-900/25 bg-paper-50 px-2 py-1.5 text-xs text-ink-950 focus:border-ink-950 focus:outline-none"
+              >
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Med</option>
+                <option value="LOW">Low</option>
+              </select>
+              <button
+                type="submit"
+                className="flex items-center gap-1 rounded-lg border border-ink-950 bg-ink-950 px-3 py-1.5 text-xs font-bold text-paper-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </form>
+
+            <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+              {tasks.length === 0 ? (
+                <p className="py-6 text-center font-mono text-xs text-ink-500">
+                  No action items recorded. Auto-extract from transcript or add one above.
+                </p>
+              ) : (
+                tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between rounded-lg border border-ink-900/15 bg-paper-100 p-2.5 text-xs font-medium text-ink-950 transition hover:bg-paper-200"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => cycleTaskStatus(task)}
+                      className="flex items-center gap-2.5 text-left flex-1"
+                    >
+                      {task.status === 'DONE' ? (
+                        <CheckCircle2 className="h-4 w-4 text-emeraldBrand shrink-0" />
+                      ) : task.status === 'IN_PROGRESS' ? (
+                        <Clock className="h-4 w-4 text-amberBrand shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-ink-400 shrink-0" />
+                      )}
+                      <div>
+                        <p className={task.status === 'DONE' ? 'line-through text-ink-400' : 'text-ink-950'}>
+                          {task.title}
+                        </p>
+                        <p className="font-mono text-[10px] text-ink-500">
+                          Owner: {task.assigneeName || 'Unassigned'} • Status: {task.status}
+                        </p>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold ${
+                          task.priority === 'HIGH'
+                            ? 'bg-coral-subtle text-coral-dark border border-coral/30'
+                            : 'bg-paper-200 text-ink-700'
                         }`}
                       >
-                        {task.title}
-                      </p>
-                      <p className="text-xs text-stone-500">
-                        Assignee: {task.assigneeName || 'Unassigned'}
-                      </p>
+                        {task.priority}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Delete task ${task.title}`}
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-ink-400 hover:text-coral transition p-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
-                  <span
-                    className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
-                      task.priority === 'HIGH'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : task.priority === 'LOW'
-                          ? 'bg-stone-100 text-stone-600'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200'
-                    }`}
-                  >
-                    {task.priority}
-                  </span>
-                </button>
-              ))}
+                ))
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-stone-900">
-              Shared Meeting Notes
-            </h2>
-            <button
-              type="button"
-              onClick={handleSaveNotes}
-              disabled={savingNotes}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50 transition"
-            >
-              <Save className="h-3.5 w-3.5" aria-hidden="true" />
-              {savingNotes ? 'Saving...' : 'Save Notes'}
-            </button>
           </div>
-          <textarea
-            className="h-48 w-full rounded-xl border border-stone-300 bg-stone-50/50 p-3 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
-            placeholder="Collaborative meeting notes, decisions, links..."
-            value={sharedNotes}
-            onChange={(e) => setSharedNotes(e.target.value)}
-          />
         </div>
       </div>
     </div>

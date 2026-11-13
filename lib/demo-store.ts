@@ -208,12 +208,23 @@ export function isDbConnectionError(err: unknown): boolean {
   const e = err as { code?: string; message?: string };
   const msg = e.message || '';
   return (
+    e.code === 'P1000' ||
     e.code === 'P1001' ||
     e.code === 'P1002' ||
+    e.code === 'P1003' ||
+    e.code === 'P1017' ||
+    e.code === 'P2021' ||
     e.code === 'ECONNREFUSED' ||
     e.code === 'ENOTFOUND' ||
+    e.code === 'ETIMEDOUT' ||
     msg.includes("Can't reach database server") ||
     msg.includes('Connection terminated') ||
-    msg.includes('ECONNREFUSED')
+    msg.includes('ECONNREFUSED') ||
+    msg.includes('Authentication failed') ||
+    msg.includes('Tenant or user not found') ||
+    msg.includes('password authentication failed') ||
+    msg.includes('does not exist') ||
+    msg.includes('database system is starting up') ||
+    msg.includes('Connection refused')
   );
 }

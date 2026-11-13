@@ -63,3 +63,21 @@ describe('AI Meeting Intelligence', () => {
     assert.ok(result.actionItems.length >= 1);
   });
 });
+
+describe('Demo Store Resilience & Error Detection', () => {
+  it('identifies database connection errors reliably', async () => {
+    const { isDbConnectionError, getDemoStore } = await import('../lib/demo-store.ts');
+    
+    assert.equal(isDbConnectionError({ code: 'P1001' }), true);
+    assert.equal(isDbConnectionError({ code: 'P1000' }), true);
+    assert.equal(isDbConnectionError({ code: 'ECONNREFUSED' }), true);
+    assert.equal(isDbConnectionError(new Error("Can't reach database server")), true);
+    assert.equal(isDbConnectionError(null), false);
+    assert.equal(isDbConnectionError(new Error('Validation error')), false);
+
+    const store = getDemoStore();
+    assert.ok(store.workspaces.length >= 1);
+    assert.ok(store.meetings.length >= 1);
+    assert.ok(store.tasks.length >= 1);
+  });
+});

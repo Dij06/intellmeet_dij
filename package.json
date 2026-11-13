@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test tests/core.test.ts",
+    "test": "node --no-warnings --test tests/core.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

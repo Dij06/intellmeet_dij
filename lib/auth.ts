@@ -23,29 +23,51 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email) return null;
         const email = credentials.email.trim().toLowerCase();
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
-
-        // Allow passwordless demo user login only for the built-in demo account
-        if (email === 'demo@intellmeet.com' && !user.password) {
+        // Allow instant passwordless demo user login
+        if (email === 'demo@intellmeet.com' && (!credentials.password || credentials.password === 'demo123')) {
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name || 'Demo User',
-            role: user.role,
+            id: 'demo-user',
+            email: 'demo@intellmeet.com',
+            name: 'Demo User',
+            role: 'ADMIN',
           };
         }
 
-        if (!credentials.password || !user.password) return null;
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) return null;
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name || email.split('@')[0],
-          role: user.role,
-        };
+          // Allow passwordless demo user login only for the built-in demo account
+          if (email === 'demo@intellmeet.com' && !user.password) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name || 'Demo User',
+              role: user.role,
+            };
+          }
+
+          if (!credentials.password || !user.password) return null;
+          const isValid = await bcrypt.compare(credentials.password, user.password);
+          if (!isValid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name || email.split('@')[0],
+            role: user.role,
+          };
+        } catch {
+          if (email === 'demo@intellmeet.com') {
+            return {
+              id: 'demo-user',
+              email: 'demo@intellmeet.com',
+              name: 'Demo User',
+              role: 'ADMIN',
+            };
+          }
+          return null;
+        }
       },
     }),
   ],

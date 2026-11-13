@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, User, Sparkles } from 'lucide-react';
+import { Lock, Mail, User, Sparkles, ArrowRight } from 'lucide-react';
+import { useToast } from '@/app/components/Toast';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +31,11 @@ export default function LoginPage() {
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || 'Registration failed');
+          showToast(data.error || 'Registration failed', 'error');
           setLoading(false);
           return;
         }
+        showToast('Account created successfully! Signing in...', 'success');
       }
 
       const result = await signIn('credentials', {
@@ -41,46 +45,74 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password. Or use Demo Mode below.');
+        setError('Invalid credentials. Check your password or use Demo mode.');
+        showToast('Authentication failed', 'error');
       } else {
+        showToast('Signed in successfully', 'success');
         router.push('/dashboard');
         router.refresh();
       }
     } catch {
-      setError('Authentication error. Please try again.');
+      setError('An unexpected network error occurred.');
+      showToast('Network error', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoAccess = () => {
-    router.push('/dashboard');
+  const handleDemoAccess = async () => {
+    setLoading(true);
+    try {
+      // Sign in automatically as built-in demo user
+      const res = await signIn('credentials', {
+        email: 'demo@intellmeet.com',
+        redirect: false,
+      });
+      if (res?.ok) {
+        showToast('Signed in as Demo User (Full Access)', 'success');
+      } else {
+        showToast('Entering Demo Mode', 'info');
+      }
+      router.push('/dashboard');
+      router.refresh();
+    } catch {
+      router.push('/dashboard');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-65px)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-stone-900">
-            {mode === 'login' ? 'Sign In to IntellMeet' : 'Create Your Account'}
+    <div className="flex min-h-[calc(100vh-60px)] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md rounded-2xl border-2 border-ink-950 bg-paper-50 p-7 shadow-tactile-lg">
+        {/* Header */}
+        <div className="border-b border-ink-900/10 pb-5">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral">
+              Authentication Portal
+            </span>
+            <span className="font-mono text-[10px] text-ink-500">JWT • Bcrypt • Neon</span>
+          </div>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink-950">
+            {mode === 'login' ? 'Sign into IntellMeet' : 'Create an Account'}
           </h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Enterprise AI Meetings, Kanban &amp; Analytics
+          <p className="mt-1 text-xs text-ink-600">
+            Access enterprise video rooms, AI summaries, and synced Kanban boards.
           </p>
         </div>
 
-        {/* Mode Toggle */}
-        <div className="mt-6 grid grid-cols-2 rounded-xl bg-stone-100 p-1 border border-stone-200">
+        {/* Mode Switcher */}
+        <div className="mt-5 grid grid-cols-2 gap-1 rounded-lg border border-ink-950 bg-paper-200 p-1">
           <button
             type="button"
             onClick={() => {
               setMode('login');
               setError('');
             }}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${
+            className={`rounded-md py-1.5 text-xs font-bold transition ${
               mode === 'login'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-500 hover:text-stone-900'
+                ? 'bg-ink-950 text-paper-50 shadow-tactile-sm'
+                : 'text-ink-700 hover:text-ink-950'
             }`}
           >
             Sign In
@@ -91,10 +123,10 @@ export default function LoginPage() {
               setMode('register');
               setError('');
             }}
-            className={`rounded-lg py-2 text-sm font-semibold transition ${
+            className={`rounded-md py-1.5 text-xs font-bold transition ${
               mode === 'register'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-500 hover:text-stone-900'
+                ? 'bg-ink-950 text-paper-50 shadow-tactile-sm'
+                : 'text-ink-700 hover:text-ink-950'
             }`}
           >
             Register
@@ -104,33 +136,30 @@ export default function LoginPage() {
         {error && (
           <div
             role="alert"
-            className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700"
+            className="mt-4 rounded-lg border border-coral bg-coral-subtle px-3 py-2 text-xs font-medium text-coral-dark"
           >
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
           {mode === 'register' && (
             <div>
               <label
-                htmlFor="name"
-                className="block text-sm font-medium text-stone-700"
+                htmlFor="user-name"
+                className="block font-mono text-[11px] font-bold uppercase text-ink-700"
               >
-                Full Name
+                Your Name
               </label>
               <div className="relative mt-1">
-                <User
-                  className="absolute left-3 top-3 h-4 w-4 text-stone-400"
-                  aria-hidden="true"
-                />
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" aria-hidden="true" />
                 <input
-                  id="name"
+                  id="user-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Alex Rivera"
-                  className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+                  placeholder="e.g. Maya Chen"
+                  className="w-full rounded-lg border border-ink-900/30 bg-paper-50 py-2 pl-9 pr-3 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
                   required
                 />
               </div>
@@ -139,23 +168,20 @@ export default function LoginPage() {
 
           <div>
             <label
-              htmlFor="email"
-              className="block text-sm font-medium text-stone-700"
+              htmlFor="user-email"
+              className="block font-mono text-[11px] font-bold uppercase text-ink-700"
             >
-              Work Email
+              Email Address
             </label>
             <div className="relative mt-1">
-              <Mail
-                className="absolute left-3 top-3 h-4 w-4 text-stone-400"
-                aria-hidden="true"
-              />
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" aria-hidden="true" />
               <input
-                id="email"
+                id="user-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+                placeholder="name@team.com"
+                className="w-full rounded-lg border border-ink-900/30 bg-paper-50 py-2 pl-9 pr-3 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
                 required
               />
             </div>
@@ -163,24 +189,21 @@ export default function LoginPage() {
 
           <div>
             <label
-              htmlFor="password"
-              className="block text-sm font-medium text-stone-700"
+              htmlFor="user-password"
+              className="block font-mono text-[11px] font-bold uppercase text-ink-700"
             >
               Password
             </label>
             <div className="relative mt-1">
-              <Lock
-                className="absolute left-3 top-3 h-4 w-4 text-stone-400"
-                aria-hidden="true"
-              />
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" aria-hidden="true" />
               <input
-                id="password"
+                id="user-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
-                className="w-full rounded-xl border border-stone-300 bg-white py-2.5 pl-10 pr-4 text-sm text-stone-900 focus:border-emerald-600 focus:outline-none"
+                className="w-full rounded-lg border border-ink-900/30 bg-paper-50 py-2 pl-9 pr-3 text-xs font-medium text-ink-950 placeholder:text-ink-400 focus:border-ink-950 focus:outline-none focus:ring-1 focus:ring-ink-950"
                 required
               />
             </div>
@@ -189,24 +212,32 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 transition"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-ink-950 bg-ink-950 py-2.5 text-xs font-bold uppercase tracking-wider text-paper-50 shadow-tactile transition hover:bg-ink-800 disabled:opacity-50 active:translate-x-0.5 active:translate-y-0.5"
           >
-            {loading
-              ? 'Please wait...'
-              : mode === 'login'
-                ? 'Sign In'
-                : 'Create Account'}
+            {loading ? (
+              'Processing...'
+            ) : (
+              <>
+                <span>{mode === 'login' ? 'Authenticate' : 'Complete Registration'}</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </>
+            )}
           </button>
         </form>
 
-        <div className="mt-6 border-t border-stone-200 pt-5">
+        {/* Demo Mode Direct Link */}
+        <div className="mt-5 border-t border-ink-900/10 pt-4">
+          <p className="text-center font-mono text-[10px] text-ink-500 mb-2">
+            EVALUATION / GUEST ACCESS
+          </p>
           <button
             type="button"
             onClick={handleDemoAccess}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition"
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-ink-950 bg-paper-100 py-2 text-xs font-bold text-ink-950 shadow-tactile-sm transition hover:bg-paper-200 active:translate-x-0.5 active:translate-y-0.5"
           >
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            Continue as Demo User (No Sign-Up)
+            <Sparkles className="h-3.5 w-3.5 text-coral" aria-hidden="true" />
+            <span>Launch Instant Demo Mode (No Sign-Up)</span>
           </button>
         </div>
       </div>
