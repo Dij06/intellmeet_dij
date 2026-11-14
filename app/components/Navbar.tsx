@@ -15,8 +15,11 @@ import {
   X,
   Sun,
   Moon,
+  User,
+  Check,
 } from 'lucide-react';
 import { useTheme } from '@/app/components/ThemeProvider';
+import { useToast } from '@/app/components/Toast';
 
 const navItems = [
   { href: '/dashboard', label: 'Meetings', shortcut: 'M', icon: LayoutGrid },
@@ -26,9 +29,19 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (session?.user?.name) {
+      setEditName(session.user.name);
+    }
+  }, [session]);
 
   // Keyboard shortcut navigation
   useEffect(() => {
@@ -50,6 +63,34 @@ export function Navbar() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim()) return;
+
+    setSavingProfile(true);
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Profile display name updated', 'success');
+        setShowProfileModal(false);
+        if (updateSession) {
+          await updateSession({ name: editName.trim() });
+        }
+      } else {
+        showToast(data.error || 'Failed to update profile', 'error');
+      }
+    } catch {
+      showToast('Network error updating profile', 'error');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg-page)]/90 backdrop-blur-md transition-colors duration-200">
@@ -93,7 +134,7 @@ export function Navbar() {
                   <span>{item.label}</span>
                   <span
                     className={`text-[10px] font-mono transition ${
-                      active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]'
+                      active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]/50 group-hover:text-[var(--text-secondary)]'
                     }`}
                   >
                     [{item.shortcut}]
@@ -130,14 +171,19 @@ export function Navbar() {
           {/* User profile / Auth */}
           {session?.user ? (
             <div className="flex items-center gap-2.5 pl-2 border-l border-[var(--border)]">
-              <div className="text-right">
-                <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight">
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(true)}
+                title="Account Settings & Profile"
+                className="text-right hover:opacity-80 transition group"
+              >
+                <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight group-hover:text-[var(--accent)]">
                   {session.user.name || session.user.email?.split('@')[0]}
                 </p>
                 <p className="text-[10px] text-[var(--text-secondary)]">
                   {(session.user as { role?: string }).role || 'MEMBER'}
                 </p>
-              </div>
+              </button>
               <button
                 type="button"
                 onClick={() => signOut({ callbackUrl: '/' })}
@@ -233,6 +279,82 @@ export function Navbar() {
                 <span>Sign In / Demo Mode</span>
               </Link>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* User Profile / Account Settings Modal */}
+      {showProfileModal && session?.user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-[var(--accent)]" />
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                  Account Profile Settings
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProfile} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={session.user.email || ''}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-page)]/60 px-3 py-2 text-xs text-[var(--text-secondary)] cursor-not-allowed opacity-80"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-page)] px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1 text-xs text-[var(--text-secondary)]">
+                <span>Account Role:</span>
+                <span className="font-semibold text-[var(--text-primary)]">
+                  {(session.user as { role?: string }).role || 'MEMBER'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="rounded-lg border border-[var(--border)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="flex items-center gap-1 rounded-lg bg-[var(--text-primary)] px-4 py-1.5 text-xs font-medium text-[var(--bg-page)] hover:opacity-90 shadow-sm disabled:opacity-50"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>{savingProfile ? 'Saving...' : 'Save Profile'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -177,3 +177,30 @@ export async function PATCH(req: Request) {
     );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Workspace id is required' }, { status: 400 });
+    }
+
+    try {
+      await prisma.workspace.delete({ where: { id } });
+      return NextResponse.json({ deleted: true }, { status: 200 });
+    } catch (dbErr) {
+      if (isDbConnectionError(dbErr)) {
+        const store = getDemoStore();
+        store.workspaces = store.workspaces.filter((w) => w.id !== id);
+        return NextResponse.json({ deleted: true, demoMode: true }, { status: 200 });
+      }
+      throw dbErr;
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message || 'Failed to delete workspace' },
+      { status: 500 }
+    );
+  }
+}

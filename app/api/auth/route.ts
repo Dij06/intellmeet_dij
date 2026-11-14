@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { registerSchema } from '@/lib/validation';
+import { registerSchema, updateProfileSchema } from '@/lib/validation';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { isDbConnectionError } from '@/lib/demo-store';
+import { getCurrentOrDemoUser } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -72,5 +73,56 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Auth registration error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const user = await getCurrentOrDemoUser();
+    const body = await req.json();
+    const parsed = updateProfileSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Invalid profile data' },
+        { status: 400 }
+      );
+    }
+
+    const { name, avatarUrl } = parsed.data;
+
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          ...(name ? { name } : {}),
+          ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          avatarUrl: true,
+        },
+      });
+      return NextResponse.json({ user: updatedUser }, { status: 200 });
+    } catch (dbErr) {
+      if (isDbConnectionError(dbErr)) {
+        return NextResponse.json(
+          {
+            user: { ...user, name: name || user.name, avatarUrl: avatarUrl || null },
+            demoMode: true,
+          },
+          { status: 200 }
+        );
+      }
+      throw dbErr;
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message || 'Failed to update profile' },
+      { status: 500 }
+    );
   }
 }

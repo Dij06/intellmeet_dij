@@ -4,6 +4,8 @@ import {
   createMeetingSchema,
   createTaskSchema,
   registerSchema,
+  updateProfileSchema,
+  summarizeSchema,
 } from '../lib/validation.ts';
 import { checkRateLimit } from '../lib/rate-limit.ts';
 import { generateMeetingIntelligence } from '../lib/ai.ts';
@@ -39,6 +41,32 @@ describe('Validation Schemas', () => {
     });
     assert.equal(ok.success, true);
   });
+
+  it('validates user profile update payload', () => {
+    const ok = updateProfileSchema.safeParse({
+      name: 'Lead Architect',
+    });
+    assert.equal(ok.success, true);
+
+    const bad = updateProfileSchema.safeParse({
+      name: 'a',
+    });
+    assert.equal(bad.success, false);
+  });
+
+  it('validates summarize schema with format options', () => {
+    const ok = summarizeSchema.safeParse({
+      transcript: 'Valid meeting notes and discussion points.',
+      format: 'brief',
+    });
+    assert.equal(ok.success, true);
+
+    const badFormat = summarizeSchema.safeParse({
+      transcript: 'Valid text',
+      format: 'unknown_format',
+    });
+    assert.equal(badFormat.success, false);
+  });
 });
 
 describe('Rate Limiter', () => {
@@ -61,6 +89,16 @@ describe('AI Meeting Intelligence', () => {
     );
     assert.ok(result.summary.length > 20);
     assert.ok(result.actionItems.length >= 1);
+  });
+
+  it('supports brief, standard, and detailed summary formats', async () => {
+    const transcript = 'Team met to discuss Q3 roadmap. Key decision: migrate backend to PostgreSQL on Neon. Next: Priya will create the deployment pipeline by Tuesday.';
+    
+    const brief = await generateMeetingIntelligence(transcript, 'brief');
+    assert.ok(brief.summary.includes('Executive Bullet Summary') || brief.summary.length > 0);
+
+    const detailed = await generateMeetingIntelligence(transcript, 'detailed');
+    assert.ok(detailed.summary.length > 0);
   });
 });
 

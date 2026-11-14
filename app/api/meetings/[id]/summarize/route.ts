@@ -20,8 +20,8 @@ export async function POST(
       );
     }
 
-    const { transcript } = parsed.data;
-    const intelligence = await generateMeetingIntelligence(transcript);
+    const { transcript, format } = parsed.data;
+    const intelligence = await generateMeetingIntelligence(transcript, format || 'standard');
 
     try {
       const existingMeeting = await prisma.meeting.findUnique({
@@ -111,9 +111,8 @@ export async function POST(
       throw dbErr;
     }
   } catch (error) {
-    console.error('Summarize API Error:', error);
     return NextResponse.json(
-      { error: (error as Error).message || 'Internal Server Error' },
+      { error: (error as Error).message || 'Failed to generate summary' },
       { status: 500 }
     );
   }

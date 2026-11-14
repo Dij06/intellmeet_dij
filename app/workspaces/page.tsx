@@ -225,6 +225,32 @@ export default function WorkspacesPage() {
     showToast('Task deleted from board', 'info');
   };
 
+  const handleDeleteWorkspace = async () => {
+    if (!selectedWsId || !activeWorkspace) return;
+    if (
+      !window.confirm(
+        `Delete workspace "${activeWorkspace.name}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/workspace?id=${selectedWsId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        showToast(`Workspace "${activeWorkspace.name}" deleted`, 'info');
+        setSelectedWsId('');
+        await loadWorkspaces();
+        await loadTasks();
+      } else {
+        showToast('Failed to delete workspace', 'error');
+      }
+    } catch {
+      showToast('Network error deleting workspace', 'error');
+    }
+  };
+
   const activeWorkspace = workspaces.find((w) => w.id === selectedWsId);
 
   // Filter tasks
@@ -320,6 +346,17 @@ export default function WorkspacesPage() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
+          {activeWorkspace && (
+            <button
+              type="button"
+              onClick={handleDeleteWorkspace}
+              title={`Delete workspace ${activeWorkspace.name}`}
+              className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-1.5 text-xs text-[var(--text-secondary)]/60 hover:text-[var(--accent)] hover:bg-[var(--bg-surface-hover)] transition"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}

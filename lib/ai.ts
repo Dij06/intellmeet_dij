@@ -21,18 +21,25 @@ const openai = process.env.OPENAI_API_KEY
  * Gracefully falls back to deterministic NLP extraction when OPENAI_API_KEY is missing or quota is exceeded.
  */
 export async function generateMeetingIntelligence(
-  transcript: string
+  transcript: string,
+  format: 'brief' | 'standard' | 'detailed' = 'standard'
 ): Promise<MeetingIntelligenceResult> {
   if (openai) {
     try {
+      const formatInstructions =
+        format === 'brief'
+          ? 'Provide a concise, high-impact 2-3 sentence executive briefing summarizing the main decision.'
+          : format === 'detailed'
+          ? 'Provide an in-depth breakdown including: ## Executive Summary, ## Key Discussion Topics, ## Decisions Made, and ## Risks & Blockers.'
+          : 'Provide an Executive Summary and bulleted Key Discussion Points.';
+
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content:
-              'You are IntellMeet AI. Analyze the meeting transcript and return valid JSON with keys: "summary" (markdown string with Executive Summary and Key Discussion Points) and "actionItems" (array of { "title": string, "assigneeName": string, "priority": "LOW" | "MEDIUM" | "HIGH" }).',
+            content: `You are IntellMeet AI. ${formatInstructions} Return valid JSON with keys: "summary" (markdown string) and "actionItems" (array of { "title": string, "assigneeName": string, "priority": "LOW" | "MEDIUM" | "HIGH" }).`,
           },
           {
             role: 'user',
@@ -76,21 +83,23 @@ export async function generateMeetingIntelligence(
     }
   }
 
-  return buildFallbackIntelligence(transcript);
+  return buildFallbackIntelligence(transcript, format);
 }
 
-function buildFallbackIntelligence(transcript: string): MeetingIntelligenceResult {
+function buildFallbackIntelligence(
+  transcript: string,
+  format: 'brief' | 'standard' | 'detailed' = 'standard'
+): MeetingIntelligenceResult {
   const sentences = transcript
     .split(/[\n.!?]+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 8);
 
-  const keyPoints = sentences.slice(0, 4).map((s) => `- ${s}`);
   const actionKeywords = /\b(will|need to|should|must|todo|action|follow up|finalize|prepare|review|create|deploy|fix|send)\b/i;
 
   const extracted: ExtractedActionItem[] = sentences
     .filter((s) => actionKeywords.test(s))
-    .slice(0, 4)
+    .slice(0, 5)
     .map((s) => {
       const speakerMatch = s.match(/^([A-Z][a-zA-Z ]{1,25}):\s*(.+)$/);
       const assigneeName = speakerMatch ? speakerMatch[1].trim() : 'Team Member';
@@ -106,25 +115,28 @@ function buildFallbackIntelligence(transcript: string): MeetingIntelligenceResul
       };
     });
 
-  if (extracted.length === 0) {
-    extracted.push({
-      title: 'Review meeting notes and assign follow-up owners',
-      assigneeName: 'Team Lead',
-      priority: 'MEDIUM',
-    });
-  }
+  let summary: string;
 
-  const summary = [
-    '### Executive Summary (IntellMeet AI)',
-    `Processed ${sentences.length || 1} discussion point(s) and extracted ${extracted.length} action item(s).`,
-    '',
-    '### Key Discussion Points',
-    ...(keyPoints.length > 0 ? keyPoints : [`- ${transcript.slice(0, 200)}`]),
-  ].join('\n');
+  if (format === 'brief') {
+    const mainTakeaways = sentences.slice(0, 2).join('. ');
+    summary = `**Executive Briefing**: ${mainTakeaways || 'Meeting held to align on key deliverables.'}.`;
+  } else if (format === 'detailed') {
+    const keyPoints = sentences.slice(0, 4).map((s) => `- ${s}`).join('\n');
+    summary = `## Executive Summary\n${sentences[0] || 'Meeting convened to align on deliverables and cross-team execution.'}\n\n## Key Discussion Points\n${keyPoints || '- Aligned on core architecture and timelines'}\n\n## Decisions Made\n- Approved action items and roadmap allocations\n- Confirmed responsibilities and verified post-call tasks`;
+  } else {
+    const keyPoints = sentences.slice(0, 3).map((s) => `- ${s}`).join('\n');
+    summary = `## Executive Summary\n${sentences[0] || 'Team alignment meeting completed.'}\n\n## Key Discussion Points\n${keyPoints || '- Aligned on core deliverables.'}`;
+  }
 
   return {
     summary,
-    actionItems: extracted,
+    actionItems: extracted.length > 0 ? extracted : [
+      {
+        title: 'Review meeting minutes and follow up with team',
+        assigneeName: 'Meeting Host',
+        priority: 'MEDIUM',
+      },
+    ],
     source: 'fallback',
   };
 }

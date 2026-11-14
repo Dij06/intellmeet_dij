@@ -6,6 +6,11 @@ export const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters').max(128).optional(),
 });
 
+export const updateProfileSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80).optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+
 export const createMeetingSchema = z.object({
   title: z.string().trim().min(1, 'Meeting title is required').max(160),
   description: z.string().trim().max(2000).optional().nullable(),
@@ -26,6 +31,7 @@ export const updateMeetingSchema = z.object({
 
 export const summarizeSchema = z.object({
   transcript: z.string().trim().min(1, 'Transcript is required').max(100000),
+  format: z.enum(['brief', 'standard', 'detailed']).optional(),
 });
 
 export const createWorkspaceSchema = z.object({

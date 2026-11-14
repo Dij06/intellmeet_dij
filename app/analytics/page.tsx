@@ -10,6 +10,7 @@ import {
   Clock,
   RotateCcw,
   Users,
+  Calendar,
 } from 'lucide-react';
 import { useToast } from '@/app/components/Toast';
 
@@ -43,6 +44,7 @@ export default function AnalyticsPage() {
   const { showToast } = useToast();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('all');
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -65,6 +67,7 @@ export default function AnalyticsPage() {
     if (!data) return;
     const rows = [
       ['Metric', 'Value'],
+      ['Time Range Filter', timeRange.toUpperCase()],
       ['Total Meetings Processed', String(data.overview.totalMeetings)],
       ['AI Summarized Meetings', String(data.overview.summarizedMeetings)],
       ['Total Meeting Minutes', String(data.overview.totalMinutes)],
@@ -80,10 +83,10 @@ export default function AnalyticsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `intellmeet-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `intellmeet-analytics-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Analytics CSV exported', 'success');
+    showToast(`Analytics CSV (${timeRange.toUpperCase()}) exported`, 'success');
   };
 
   if (loading || !data) {
@@ -116,6 +119,28 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Time range selector */}
+          <div className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-1 text-xs font-medium">
+            <Calendar className="h-3.5 w-3.5 text-[var(--text-secondary)] ml-1" />
+            {(['all', '30d', '7d'] as const).map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => {
+                  setTimeRange(range);
+                  showToast(`Filter set to ${range === 'all' ? 'All Time' : range === '30d' ? 'Last 30 Days' : 'Last 7 Days'}`, 'info');
+                }}
+                className={`rounded px-2.5 py-1 text-xs transition ${
+                  timeRange === range
+                    ? 'bg-[var(--text-primary)] text-[var(--bg-page)] shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {range === 'all' ? 'All' : range === '30d' ? '30 Days' : '7 Days'}
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             onClick={loadAnalytics}
